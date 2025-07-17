@@ -81,14 +81,14 @@ class Compare(Instruction):
         
         flag_prob = peq * eq_prob + plt * lt_prob + pgt * gt_prob
         flag = torch.zeros(len(flag_prob), 10)
-        flag[:,0] = flag_prob.squeeze(1)
-        # print(f"flag is {flag}")
+        flag[:,1] = flag_prob.squeeze(1)
+        print(f"flag is {flag}")
         # print(f"register before is {state.R.registers}")
         
         w_prob = torch.einsum("bo,o->b",p_cmp,self.register_write_gate).unsqueeze(-1) # (B,1)
         # state.R.write(args["p_dst"], flag, w_prob)
         # print(f"register now is {state.R.registers}")
-        
+        print(f"w_prob {w_prob}")
         return flag, w_prob
         return state
 
@@ -104,19 +104,23 @@ class Control(Instruction):
         self.register_write_gate = torch.zeros(len(op_ids))
         
     def forward(self, args, p_control, state):
-        # print("now doing control")
+        print("now doing control")
         p_jump = p_control[:, self.idx["jump"]:self.idx["jump"]+1]
         # print(f"p_jump is {p_jump}")
         p_halt = p_control[:, self.idx["halt"]:self.idx["halt"]+1]
             
         p_cond = args["p_cond"]
+        print(f"condlist is {state.R.read(p_cond)}")
         cond = state.R.read(p_cond)[:, 1:2] 
         # print(f"cond is {cond}")
         state.h = state.h + (1 - state.h) * p_halt        
         pc_inc = torch.roll(state.pc, shifts=1, dims=1)
         
+        print(f"p_jump {p_jump}")
+        print(f"p_addr {args['p_addr']}")
+        print(f"cond is {cond}")
         state.pc = (1 - p_jump) * pc_inc + p_jump * ((1 - cond) * pc_inc + cond * args["p_addr"])
-        
+        print(f"pc is {state.pc}")
         dummy_val = torch.zeros_like(state.R.read(args["p_dst"]))
         dummy_w   = torch.zeros(self.config.batch_size, 1)
         # print(f"dummy {dummy_w}")

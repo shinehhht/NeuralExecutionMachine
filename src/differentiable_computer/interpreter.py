@@ -58,7 +58,6 @@ class Interpreter(nn.Module):
         # add conditional jump
         self.cond_slice = slice(self.n_ops + 3*n_regs, self.n_ops + 4*n_regs)
         self.jump_addr_slice = slice(self.n_ops + 4*n_regs, self.n_ops + 4*n_regs + len(prog))
-        
         self.op_id = {op: i for i, op in enumerate(op_set)}
         
     def forward(self, state):
@@ -71,6 +70,7 @@ class Interpreter(nn.Module):
         p_s1   = F.softmax(line_logits[:, self.src1_slice],dim=-1)    # (b,r)
         p_s2   = F.softmax(line_logits[:, self.src2_slice],dim=-1)    # (b,r)
         p_cond = F.softmax(line_logits[:, self.cond_slice], dim=-1)   # (b, n_regs)
+        print(f"p_cond {p_cond}")
         p_addr = F.softmax(line_logits[:, self.jump_addr_slice], dim=-1)   # (b, n_lines)
         print(f"p_addr {p_addr}")
         instructions = build_instructions(self.config)

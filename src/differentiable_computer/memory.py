@@ -69,7 +69,7 @@ class Register(nn.Module):
         w_sum = w_stack.sum(0) # (B,1)
         
         write_prob = p_dst.unsqueeze(-1) * w_sum.unsqueeze(1) 
-        
+        print(f"write_prob {write_prob}")
         self.write(p_dst, combined, write_prob)
 
         
