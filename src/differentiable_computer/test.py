@@ -39,6 +39,6 @@ with torch.no_grad():
     state.R.registers[5, 1] = 1.    # r5 = 1
     
  
-state = computer.run(state,3)
+state = computer.run(state,10)
 
 print(state.R.read(torch.tensor([[ 0.,0.,0.,1.,0.,0.]])).argmax(1).item())

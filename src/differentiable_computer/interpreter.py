@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from instructions import Arithmetic, Compare, Control
-from config import config
 
 def build_lookup(n):
     

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from instructions import Instruction
-from memory import Memory, Register
+from memory import Memory, Register, Register1, Memory1
 
 class State():
     def __init__(self, batch_size, n_regs, value_size, prog_len, address_num):
@@ -11,7 +11,13 @@ class State():
         self.pc[:,0] = 1.0
         self.h = torch.zeros(batch_size,1)
         
-        
+class State1():
+    def __init__(self, batch_size, R, M, pc):
+        self.R = Register1(R)
+        self.Memory = Memory1(M)
+        self.pc = pc
+        self.h = torch.zeros(batch_size,1)
+             
 class DifferentiableComputer(nn.Module):
     def __init__(self, interpreter, max_steps=128, halt_threshold=0.99):
         super().__init__()

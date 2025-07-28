@@ -60,6 +60,34 @@ def make_program_demo_compare(n_regs,n_vals):
     4: halt
     
     """
+    
+    n_ops = len(config.OP_SET)
+    param_dim = n_ops + 4 * n_regs + 5
+    P = torch.full((5, param_dim), -6.)
+    
+    P[0,OP_SET.index('cmp_eq')] = 6.
+    P[0,n_ops + 2] = 6.
+    P[0,n_ops + n_regs + 4] = 6.
+    P[0,n_ops + 2*n_regs + 5] = 6.
+    
+    
+    P[1,OP_SET.index('jump')] = 6.
+    P[1,n_ops + 3*n_regs + 2] = 6.
+    P[1,n_ops + 4*n_regs + 3] = 6.
+    
+    P[2,OP_SET.index('Add')] = 6.
+    P[2,n_ops + 4] = 6. # dst
+    P[2,n_ops + n_regs + 1] = 6. # src1
+    P[2,n_ops + 2*n_regs + 0] = 6. # src2
+    
+    
+    P[3,OP_SET.index('Sub')] = 6.
+    P[3,n_ops + 3] = 6. # dst
+    P[3,n_ops + n_regs + 1] = 6. # src1
+    P[3,n_ops + 2*n_regs + 0] = 6. # src2
+    
+    P[4,OP_SET.index('halt')] = 6.
+    """
     n_ops = len(config.OP_SET)
     param_dim = n_ops + 4 * n_regs + 5
     P = torch.full((5, param_dim), -100.)
@@ -86,6 +114,6 @@ def make_program_demo_compare(n_regs,n_vals):
     P[3,n_ops + 2*n_regs + 0] = 100. # src2
     
     P[4,OP_SET.index('halt')] = 100.
-    
+    """
     return P
     
