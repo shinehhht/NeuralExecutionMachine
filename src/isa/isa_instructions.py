@@ -32,7 +32,7 @@ def op_jmp(r1, r2, imm, mask):
     cond = ((r1 - 1.) > -1e3) & ((r1 - 1.) < 1e3)
     pc_delta = torch.where(cond, imm, torch.ones_like(imm))  
    
-    pc_delta = mask * pc_delta.squeeze(-1) # imm为0，陷入死循环
+    pc_delta = mask * pc_delta.squeeze(-1) # imm为0，陷入死循环 TBD
     
     return torch.zeros_like(r1), pc_delta
     

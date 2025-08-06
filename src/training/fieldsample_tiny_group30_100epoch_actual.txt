@@ -1,0 +1,60 @@
+Epoch 0: 
+field loss against 'Gtarget'= { R: 0.30358920, op: 0.10865492, dst: 0.09136070, src1: 0.10919023, src2: 0.10236020, imm: 0.09786534, prog_len: 0.11100788 } | average loss percentage = { R: 0.82800001, prog_len: 0.02800000, op: 0.02800000, dst: 0.02800000, imm: 0.02800000, src2: 0.02800000, src1: 0.02800000 }
+field loss against 'Atarget' = { R: 0.30358920, op: 0.10865492, dst: 0.09136070, src1: 0.10919023, src2: 0.10236020, imm: 0.09786534, prog_len: 0.11100788 } | actual program_loss :11.07037544
+
+Epoch 1: 
+field loss against 'Gtarget'= { R: 0.22628315, op: 0.01583656, dst: 0.01437162, src1: 0.01676609, src2: 0.01417740, imm: 0.01706533, prog_len: 0.01584068 } | average loss percentage = { R: 0.96560001, prog_len: 0.00560000, op: 0.00560000, dst: 0.00560000, imm: 0.00560000, src2: 0.00560000, src1: 0.00560000 }
+field loss against 'Atarget' = { R: 0.22628315, op: 0.01583656, dst: 0.01437162, src1: 0.01676609, src2: 0.01417740, imm: 0.01706533, prog_len: 0.01584068 } | actual program_loss :7.44608879
+
+Epoch 2: 
+field loss against 'Gtarget'= { R: 0.20876838, op: 0.00575725, dst: 0.00501566, src1: 0.00598921, src2: 0.00519498, imm: 0.00569568, prog_len: 0.00587685 } | average loss percentage = { R: 0.99312001, prog_len: 0.00112000, op: 0.00112000, dst: 0.00112000, imm: 0.00112000, src2: 0.00112000, src1: 0.00112000 }
+field loss against 'Atarget' = { R: 0.20876838, op: 0.00575725, dst: 0.00501566, src1: 0.00598921, src2: 0.00519498, imm: 0.00569568, prog_len: 0.00587685 } | actual program_loss :6.75400925
+
+Epoch 3: 
+field loss against 'Gtarget'= { R: 0.19921127, op: 0.00288113, dst: 0.00249260, src1: 0.00298135, src2: 0.00268940, imm: 0.00272617, prog_len: 0.00295556 } | average loss percentage = { R: 0.99862403, prog_len: 0.00022400, op: 0.00022400, dst: 0.00022400, imm: 0.00022400, src2: 0.00022400, src1: 0.00022400 }
+field loss against 'Atarget' = { R: 0.19921127, op: 0.00288113, dst: 0.00249260, src1: 0.00298135, src2: 0.00268940, imm: 0.00272617, prog_len: 0.00295556 } | actual program_loss :6.41157341
+
+Epoch 4: 
+field loss against 'Gtarget'= { R: 0.19166544, op: 0.00181306, dst: 0.00159297, src1: 0.00191536, src2: 0.00172046, imm: 0.00172078, prog_len: 0.00189879 } | average loss percentage = { R: 0.99972481, prog_len: 0.00004480, op: 0.00004480, dst: 0.00004480, imm: 0.00004480, src2: 0.00004480, src1: 0.00004480 }
+field loss against 'Atarget' = { R: 0.19166544, op: 0.00181306, dst: 0.00159297, src1: 0.00191536, src2: 0.00172046, imm: 0.00172078, prog_len: 0.00189879 } | actual program_loss :6.15685844
+
+Epoch 5: 
+field loss against 'Gtarget'= { R: 0.18481682, op: 0.00129005, dst: 0.00113307, src1: 0.00137523, src2: 0.00122826, imm: 0.00122434, prog_len: 0.00135926 } | average loss percentage = { R: 0.99994498, prog_len: 0.00000896, op: 0.00000896, dst: 0.00000896, imm: 0.00000896, src2: 0.00000896, src1: 0.00000896 }
+field loss against 'Atarget' = { R: 0.18481682, op: 0.00129005, dst: 0.00113307, src1: 0.00137523, src2: 0.00122826, imm: 0.00122434, prog_len: 0.00135926 } | actual program_loss :5.93105507
+
+Epoch 6: 
+field loss against 'Gtarget'= { R: 0.17824528, op: 0.00098413, dst: 0.00085290, src1: 0.00104562, src2: 0.00093140, imm: 0.00092411, prog_len: 0.00103118 } | average loss percentage = { R: 0.99998903, prog_len: 0.00000179, op: 0.00000179, dst: 0.00000179, imm: 0.00000179, src2: 0.00000179, src1: 0.00000179 }
+field loss against 'Atarget' = { R: 0.17824528, op: 0.00098413, dst: 0.00085290, src1: 0.00104562, src2: 0.00093140, imm: 0.00092411, prog_len: 0.00103118 } | actual program_loss :5.71676397
+
+Epoch 7: 
+field loss against 'Gtarget'= { R: 0.17173935, op: 0.00078057, dst: 0.00066497, src1: 0.00082103, src2: 0.00073080, imm: 0.00072043, prog_len: 0.00080943 } | average loss percentage = { R: 0.99999785, prog_len: 0.00000036, op: 0.00000036, dst: 0.00000036, imm: 0.00000036, src2: 0.00000036, src1: 0.00000036 }
+field loss against 'Atarget' = { R: 0.17173935, op: 0.00078057, dst: 0.00066497, src1: 0.00082103, src2: 0.00073080, imm: 0.00072043, prog_len: 0.00080943 } | actual program_loss :5.50587559
+
+Epoch 8: 
+field loss against 'Gtarget'= { R: 0.16532356, op: 0.00063170, dst: 0.00052914, src1: 0.00065713, src2: 0.00058618, imm: 0.00057478, prog_len: 0.00064875 } | average loss percentage = { R: 0.99999958, prog_len: 0.00000007, op: 0.00000007, dst: 0.00000007, imm: 0.00000007, src2: 0.00000007, src1: 0.00000007 }
+field loss against 'Atarget' = { R: 0.16532356, op: 0.00063170, dst: 0.00052914, src1: 0.00065713, src2: 0.00058618, imm: 0.00057478, prog_len: 0.00064875 } | actual program_loss :5.29860783
+
+Epoch 9: 
+field loss against 'Gtarget'= { R: 0.15912221, op: 0.00051513, dst: 0.00042472, src1: 0.00053097, src2: 0.00047513, imm: 0.00046407, prog_len: 0.00052475 } | average loss percentage = { R: 0.99999994, prog_len: 0.00000001, op: 0.00000001, dst: 0.00000001, imm: 0.00000001, src2: 0.00000001, src1: 0.00000001 }
+field loss against 'Atarget' = { R: 0.15912221, op: 0.00051513, dst: 0.00042472, src1: 0.00053097, src2: 0.00047513, imm: 0.00046407, prog_len: 0.00052475 } | actual program_loss :5.09865093
+
+Epoch [10/100], train_loss: 0.0103
+
+Epoch 10/100 | val_loss: 0.0086 | program_loss :4.99080133 | field loss against 'Atarget' = { R: 0.15577160, op: 0.00046366, dst: 0.00037857, src1: 0.00047558, src2: 0.00042677, imm: 0.00041531, prog_len: 0.00047014 }
+
+Epoch 10: 
+field loss against 'Gtarget'= { R: 0.15317419, op: 0.00042276, dst: 0.00034454, src1: 0.00043353, src2: 0.00038855, imm: 0.00037855, prog_len: 0.00042882 } | average loss percentage = { R: 1.00000000, prog_len: 0.00000000, op: 0.00000000, dst: 0.00000000, imm: 0.00000000, src2: 0.00000000, src1: 0.00000000 }
+field loss against 'Atarget' = { R: 0.15317419, op: 0.00042276, dst: 0.00034454, src1: 0.00043353, src2: 0.00038855, imm: 0.00037855, prog_len: 0.00042882 } | actual program_loss :4.90713501
+
+Epoch 11: 
+field loss against 'Gtarget'= { R: 0.14752518, op: 0.00034871, dst: 0.00028228, src1: 0.00035732, src2: 0.00032007, imm: 0.00031120, prog_len: 0.00035373 } | average loss percentage = { R: 1.00000000, prog_len: 0.00000000, op: 0.00000000, dst: 0.00000000, imm: 0.00000000, src2: 0.00000000, src1: 0.00000000 }
+field loss against 'Atarget' = { R: 0.14752518, op: 0.00034871, dst: 0.00028228, src1: 0.00035732, src2: 0.00032007, imm: 0.00031120, prog_len: 0.00035373 } | actual program_loss :4.72543669
+
+Epoch 12: 
+field loss against 'Gtarget'= { R: 0.14223041, op: 0.00029101, dst: 0.00023483, src1: 0.00029771, src2: 0.00026710, imm: 0.00025923, prog_len: 0.00029471 } | average loss percentage = { R: 1.00000000, prog_len: 0.00000000, op: 0.00000000, dst: 0.00000000, imm: 0.00000000, src2: 0.00000000, src1: 0.00000000 }
+field loss against 'Atarget' = { R: 0.14223041, op: 0.00029101, dst: 0.00023483, src1: 0.00029771, src2: 0.00026710, imm: 0.00025923, prog_len: 0.00029471 } | actual program_loss :4.55527258
+
+Epoch 13: 
+field loss against 'Gtarget'= { R: 0.13728954, op: 0.00024453, dst: 0.00019732, src1: 0.00024964, src2: 0.00022469, imm: 0.00021778, prog_len: 0.00024710 } | average loss percentage = { R: 1.00000000, prog_len: 0.00000000, op: 0.00000000, dst: 0.00000000, imm: 0.00000000, src2: 0.00000000, src1: 0.00000000 }
+field loss against 'Atarget' = { R: 0.13728954, op: 0.00024453, dst: 0.00019732, src1: 0.00024964, src2: 0.00022469, imm: 0.00021778, prog_len: 0.00024710 } | actual program_loss :4.39658070
+

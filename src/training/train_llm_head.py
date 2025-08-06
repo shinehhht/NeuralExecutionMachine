@@ -19,11 +19,16 @@ LLM.resize_token_embeddings(len(tokenizer))
 #print(f"end token {tokenizer.eos_token_id} {tokenizer.eos_token}")
 model = Augmented_LLM(LLM, tokenizer, config.n_regs, config.n_val, config.prog_max_length, config.dropout, LLM.config.hidden_size, config.max_tokens, config.intermidate_dim).to('cuda:0')
 
+
 for name, param in model.named_parameters():
-    if 'lm_head' in name:
-        param.requires_grad = True
+    print(name)
+    if 'LLM' in name:
+        if 'lm_head' in name:
+            param.requires_grad = True
+        else:
+            param.requires_grad = False
     else:
-        param.requires_grad = False
+        param.requires_grad = True
 
   
 
@@ -112,7 +117,7 @@ trainer = Trainer(
     args=training_args,
     train_dataset=tokenized_dataset,
     tokenizer=tokenizer,
-    callbacks = [PeriodicInferenceCallback(tokenizer)]
+    # callbacks = [PeriodicInferenceCallback(tokenizer)]
 )
 
 trainer.train()
