@@ -9,7 +9,7 @@ from config import config
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # model = RegulateRegisterModel(8,16,16,0.3,64,64).to(device)
 model = MiniModel(config).to(device)
-model.load_state_dict(torch.load("mlp-test/mlp_model_fieldsample_tiny_group30_actual.pth"))
+model.load_state_dict(torch.load("mlp-test/mlp_model_fieldsample_tiny_group30_100epoch_actual.pth"))
 model.eval()
 
 
