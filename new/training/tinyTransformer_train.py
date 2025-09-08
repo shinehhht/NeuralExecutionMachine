@@ -8,7 +8,6 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from model.tinymodel import MiniModel,ModelWithoutNEM
-from utils import assistLoss, computportions
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from config import config
 import argparse
@@ -85,7 +84,6 @@ def train(args):
    
     for name, param in model_without_NEM_state_dict.items():
         if name in model_with_NEM_state_dict and 'NEM' not in name:
-            print('yes')
             model_with_NEM_state_dict[name] = param
             
     optimizer_with_NEM = optim.Adam(model_with_NEM.parameters(), lr=0.001)
