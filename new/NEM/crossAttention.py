@@ -101,3 +101,39 @@ class Prog2Transformer(CrossAttention):
         fused_states = hidden_state + attn_output
         
         return fused_states
+    
+class InitialParse(CrossAttention):
+    def __init__(self,config):
+        super().__init__(config)
+         
+        # Q
+        self.slot_queries = nn.Parameter(torch.randn(config.total_slots_registers, config.hidden_dim))
+        
+    def forward(self, hidden_state):
+        """
+        hidden_state (b,l,d)
+        """
+        assert self.config.total_slots_registers == 2 + 6 * self.config.num_instructions
+        batch_size = hidden_state.shape[0]
+        
+        K = self.k_proj(hidden_state)  # (b, l, d)
+        V = self.v_proj(hidden_state)
+        
+        Q = self.slot_queries.unsqueeze(0).expand(batch_size,-1,-1) # (b,slots,d)
+        
+        Z = self.multihead_cross_attn(Q,K,V) # (b,slots,d)
+        
+        
+        instruction_tokens = self.config.num_instructions
+    
+        # for initialize registers
+        value_initial = Z[:, 0:1, :]
+        k_initial = Z[:, 1:2, :]
+        
+        gate = Z[:,2:2+instruction_tokens, :]
+        k_write = Z[:, 2+instruction_tokens:2+2*instruction_tokens, :]
+        q_read = Z[:, 2+2*instruction_tokens:2+4*instruction_tokens, :]
+        opcode = Z[:, 2+4*instruction_tokens:2+5*instruction_tokens, :]
+        cond = Z[:, -instruction_tokens:, :]
+        
+        return value_initial, k_initial, gate, k_write, q_read, opcode, cond

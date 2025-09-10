@@ -14,12 +14,52 @@ import argparse
 from torch.utils.tensorboard import SummaryWriter
 
 class AddDataset(Dataset):
-    def __init__(self, N, low=0, high=10, seed=0):
+    def __init__(self, N, low, high, seed):
         g = torch.Generator().manual_seed(seed)
+        
         a = torch.randint(low, high, (N, 1), generator=g)
         b = torch.randint(low, high, (N, 1), generator=g)
-        x = torch.cat([a.float(), b.float()], dim=1)  
-        y = (a + b).float()                           
+        x = torch.cat([a, b], dim=1).float()
+        y = a + b
+        
+        self.x, self.y = x,y
+        
+    def __len__(self):
+        return self.x.size(0)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+    
+    
+class MultiDataset(Dataset):
+    def __init__(self, N, low, high, seed):
+        g = torch.Generator().manual_seed(seed)
+        per_num = N // 3
+        
+        def sample_ab(n):
+            a = torch.randint(low, high, (n, 1), generator=g)
+            b = torch.randint(low, high, (n, 1), generator=g)
+            return a, b
+        
+        a_add, b_add = sample_ab(per_num)
+        x_add = torch.cat([a_add, b_add], dim=1).float()
+        y_add = (a_add + b_add).float()
+
+       
+        a_sub, b_sub = sample_ab(per_num)
+        x_sub = torch.cat([a_sub, b_sub], dim=1).float()
+        y_sub = (a_sub - b_sub).float()
+       
+      
+        a_mul, b_mul = sample_ab(per_num)
+        x_mul = torch.cat([a_mul, b_mul], dim=1).float()
+        y_mul = ((a_mul * b_mul)% (2**15)).float()
+        
+        x = torch.cat([x_add, x_sub, x_mul], dim=0)
+        y = torch.cat([y_add, y_sub, y_mul], dim=0)   
+        
+        perm = torch.randperm(x.size(0), generator=g)
+        x, y = x[perm], y[perm]         
         self.x, self.y = x, y
 
     def __len__(self):
@@ -39,11 +79,11 @@ class LoadAddDataset(Dataset):
         return self.x[idx], self.y[idx] 
     
  
-#total = AddDataset(N=100000, low=0, high=10, seed=42)
-#torch.save({'x': total.x, 'y': total.y}, './simpleTransformer_test/add_dataset.pt')
+total = AddDataset(N=100000, low=0, high=10, seed=42)
+torch.save({'x': total.x, 'y': total.y}, './training/simpleTransformer_test/add_dataset_classify.pt')
 
-data = torch.load('./training/simpleTransformer_test/add_dataset.pt')
-total = LoadAddDataset(data['x'], data['y'])
+#data = torch.load('./training/simpleTransformer_test/add_dataset.pt')
+#total = LoadAddDataset(data['x'], data['y'])
 
 train_len = int(0.7 * len(total))
 val_len = len(total) - train_len
@@ -86,9 +126,9 @@ def train(args):
         if name in model_with_NEM_state_dict and 'NEM' not in name:
             model_with_NEM_state_dict[name] = param
             
-    optimizer_with_NEM = optim.Adam(model_with_NEM.parameters(), lr=0.001)
-    optimizer_without_NEM = optim.Adam(model_without_NEM.parameters(), lr=0.001)
-
+    optimizer_with_NEM = optim.Adam(model_with_NEM.parameters(), lr=0.00015)
+    optimizer_without_NEM = optim.Adam(model_without_NEM.parameters(), lr=0.00015)
+    loss_fn = torch.nn.CrossEntropyLoss() 
 
     ##### Train
     for epoch in tqdm(range(epochs)):
@@ -100,16 +140,19 @@ def train(args):
         num_samples = 0
         
         for inputs, labels in train_loader:
-            inputs = inputs.unsqueeze(-1)
 
+            inputs = inputs.unsqueeze(-1)
+            labels = labels.squeeze(1)
+            
             batch_size = inputs.size(0)
         
             inputs  = inputs.to(device, non_blocking=True)  
             labels  = labels.to(device, non_blocking=True)   
 
                 
-            outputs = model_with_NEM(inputs) # output (B,1)
-            loss = F.mse_loss(outputs, labels)
+            logits = model_with_NEM(inputs) # output (B,19)
+            loss = loss_fn(logits,labels)
+            # loss = F.mse_loss(outputs, labels)
             total_loss1 += loss.item() * batch_size
             num_samples += batch_size
             optimizer_with_NEM.zero_grad()
@@ -117,8 +160,8 @@ def train(args):
             optimizer_with_NEM.step()
 
 
-            outputs_without_NEM = model_without_NEM(inputs)
-            loss_without_NEM = F.mse_loss(outputs_without_NEM, labels)
+            logits_without_NEM = model_without_NEM(inputs)
+            loss_without_NEM = loss_fn(logits_without_NEM, labels)
             total_loss2 += loss_without_NEM.item() * batch_size
             optimizer_without_NEM.zero_grad()
             loss_without_NEM.backward()
@@ -151,16 +194,18 @@ def train(args):
         with torch.no_grad():
             for inputs, labels in val_loader:
                 inputs = inputs.unsqueeze(-1)
+                labels = labels.squeeze(1)
+                
                 batch_size = inputs.size(0)
+                
                 inputs = inputs.to(device, non_blocking=True)
-
                 labels = labels.to(device, non_blocking=True)
 
 
-                outputs1 = model_with_NEM.forward(inputs)
-                outputs2 = model_without_NEM.forward(inputs)
-                loss1 = F.mse_loss(outputs1, labels)
-                loss2 = F.mse_loss(outputs2, labels)
+                logits1 = model_with_NEM.forward(inputs)
+                logits2 = model_without_NEM.forward(inputs)
+                loss1 = loss_fn(logits1, labels)
+                loss2 = loss_fn(logits2, labels)
                 val_loss1 += loss1.item() * batch_size
                 val_loss2 += loss2.item() * batch_size
                 val_num_samples += batch_size

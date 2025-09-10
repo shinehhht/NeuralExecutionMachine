@@ -8,5 +8,7 @@ config = SimpleNamespace(
    num_instructions = 4,
    num_op = 2,
    num_cycles = 2,
-   instruction_types = 4
+   instruction_types = 4,
+   total_slots_registers=26,
+   n_regs = 4
 )

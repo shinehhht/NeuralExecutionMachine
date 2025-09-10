@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import config
-from NEM.nem import NeuralExecutionModule
+from NEM.nem import NeuralExecutionModule, NeuralExecutionModuleWithRegisters
 
 
 class SimpleTransformerBlock(nn.Module):
@@ -57,7 +57,7 @@ class ModelWithoutNEM(nn.Module):
         super().__init__()
         self.config = config
         self.interprate = nn.Linear(1,config.hidden_dim)
-        self.output = nn.Linear(config.hidden_dim, 1)
+        self.output = nn.Linear(config.hidden_dim, 19)
         
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)
@@ -73,7 +73,7 @@ class ModelWithoutNEM(nn.Module):
         hidden_state2 = self.transformer_block2(hidden_state1)
         hidden_state3 = self.transformer_block3(hidden_state2)
        
-        output = self.output(hidden_state3[:,-1,:]) # (b,1)
+        output = self.output(hidden_state3[:,-1,:]) # (b,19)
         
         return output 
         
@@ -85,9 +85,9 @@ class MiniModel(nn.Module):
         super().__init__()
         self.config = config
         self.interprate = nn.Linear(1,config.hidden_dim)
-        self.output = nn.Linear(config.hidden_dim, 1)
+        self.output = nn.Linear(config.hidden_dim, 19)
         
-        self.NEM = NeuralExecutionModule(config)
+        self.NEM = NeuralExecutionModuleWithRegisters(config)
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)
         self.transformer_block3 = SimpleTransformerBlock(config)
@@ -109,7 +109,7 @@ class MiniModel(nn.Module):
         hidden_state3 = self.transformer_block3(fused_hidden_states2)
         fused_hidden_states3 = self.NEM(hidden_state3) # (b,2,d)
         #print(f'fused hidden state {fused_hidden_states3.shape}')
-        output = self.output(fused_hidden_states3[:,-1,:]) # (b,1)
+        output = self.output(fused_hidden_states3[:,-1,:]) # (b,19)
         
         return output 
         

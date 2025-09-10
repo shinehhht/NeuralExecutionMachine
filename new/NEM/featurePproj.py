@@ -39,4 +39,40 @@ class FeatureProj(nn.Module):
         cond_distribution = self.cond_head(cond)
         
         return instructions_distribution, mask_distribution, cond_distribution
+    
+class FeatureProjWithRegisters(nn.Module):
+    def __init__(self,config):
+        super().__init__()
+        
+        self.config = config
+        
+        self.opcode_head = nn.Sequential(
+            nn.Linear(config.hidden_dim, config.hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(config.hidden_dim // 2, config.instruction_types)  
+        )
+        
+        
+        self.cond_head = nn.Sequential(
+            nn.Linear(config.hidden_dim, config.hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(config.hidden_dim // 2, 1) 
+        )
+        
+        self.gate_head = nn.Sequential(
+            nn.Linear(config.hidden_dim, config.hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(config.hidden_dim // 2, 1) 
+        )
+        
+        
+        
+    def forward(self, opcode, cond,gate):
+        instructions_distribution = F.softmax(self.opcode_head(opcode), dim=-1)
+        gate = torch.sigmoid(self.gate_head(gate))
+        
+        #TODO
+        cond_distribution = self.cond_head(cond)
+        
+        return instructions_distribution,  cond_distribution, gate
         

@@ -1,160 +1,160 @@
-Epoch [10/200], train_loss_with_NEM: 11877.7017
-Epoch [10/200], train_loss_without_NEM: 0.1478
+Epoch [10/200], train_loss_with_NEM: 11023.2370
+Epoch [10/200], train_loss_without_NEM: 1641.9875
 
-Epoch [10/200], val_loss_with_NEM: 370.6044
-Epoch [10/200], val_loss_without_NEM: 0.0442
+Epoch [10/200], val_loss_with_NEM: 1096.4785
+Epoch [10/200], val_loss_without_NEM: 1126.3883
 
 
 
-Epoch [20/200], train_loss_with_NEM: 2031049824.2853
-Epoch [20/200], train_loss_without_NEM: 28.6275
+Epoch [20/200], train_loss_with_NEM: 72143.5124
+Epoch [20/200], train_loss_without_NEM: 1039.7623
 
-Epoch [20/200], val_loss_with_NEM: 2258297634.6795
-Epoch [20/200], val_loss_without_NEM: 2.7114
+Epoch [20/200], val_loss_with_NEM: 25755.4773
+Epoch [20/200], val_loss_without_NEM: 555.5409
 
 
 
-Epoch [30/200], train_loss_with_NEM: 1736168478.0471
-Epoch [30/200], train_loss_without_NEM: 3.4128
+Epoch [30/200], train_loss_with_NEM: 20764.0012
+Epoch [30/200], train_loss_without_NEM: 728.8101
 
-Epoch [30/200], val_loss_with_NEM: 1849210376.8064
-Epoch [30/200], val_loss_without_NEM: 0.7457
+Epoch [30/200], val_loss_with_NEM: 3832.0537
+Epoch [30/200], val_loss_without_NEM: 136.3729
 
 
 
-Epoch [40/200], train_loss_with_NEM: 2649634464431.0308
-Epoch [40/200], train_loss_without_NEM: 2.0023
+Epoch [40/200], train_loss_with_NEM: 39798.5867
+Epoch [40/200], train_loss_without_NEM: 694.9187
 
-Epoch [40/200], val_loss_with_NEM: 1349255118.1653
-Epoch [40/200], val_loss_without_NEM: 0.3057
+Epoch [40/200], val_loss_with_NEM: 10378.7887
+Epoch [40/200], val_loss_without_NEM: 147.0813
 
 
 
-Epoch [50/200], train_loss_with_NEM: 3773612788.5751
-Epoch [50/200], train_loss_without_NEM: 0.7015
+Epoch [50/200], train_loss_with_NEM: 11559.3463
+Epoch [50/200], train_loss_without_NEM: 618.3066
 
-Epoch [50/200], val_loss_with_NEM: 1063118943.2661
-Epoch [50/200], val_loss_without_NEM: 0.1093
+Epoch [50/200], val_loss_with_NEM: 2052.3024
+Epoch [50/200], val_loss_without_NEM: 330.5746
 
 
 
-Epoch [60/200], train_loss_with_NEM: 552620132.6446
-Epoch [60/200], train_loss_without_NEM: 0.9143
+Epoch [60/200], train_loss_with_NEM: 12616.8337
+Epoch [60/200], train_loss_without_NEM: 535.2269
 
-Epoch [60/200], val_loss_with_NEM: 709966623.6416
-Epoch [60/200], val_loss_without_NEM: 1.3754
+Epoch [60/200], val_loss_with_NEM: 3131.0406
+Epoch [60/200], val_loss_without_NEM: 71.1004
 
 
 
-Epoch [70/200], train_loss_with_NEM: 283318805.8039
-Epoch [70/200], train_loss_without_NEM: 4.7903
+Epoch [70/200], train_loss_with_NEM: 7550.3430
+Epoch [70/200], train_loss_without_NEM: 826.8854
 
-Epoch [70/200], val_loss_with_NEM: 352739358.1227
-Epoch [70/200], val_loss_without_NEM: 1.4540
+Epoch [70/200], val_loss_with_NEM: 2351.2317
+Epoch [70/200], val_loss_without_NEM: 1375.4978
 
 
 
-Epoch [80/200], train_loss_with_NEM: 1223520216.4005
-Epoch [80/200], train_loss_without_NEM: 1.8676
+Epoch [80/200], train_loss_with_NEM: 5281.7336
+Epoch [80/200], train_loss_without_NEM: 577.2848
 
-Epoch [80/200], val_loss_with_NEM: 153014452.3093
-Epoch [80/200], val_loss_without_NEM: 0.6849
+Epoch [80/200], val_loss_with_NEM: 3169.8798
+Epoch [80/200], val_loss_without_NEM: 221.7637
 
 
 
-Epoch [90/200], train_loss_with_NEM: 100512427.3417
-Epoch [90/200], train_loss_without_NEM: 1.4410
+Epoch [90/200], train_loss_with_NEM: 16370942583.9543
+Epoch [90/200], train_loss_without_NEM: 2205.9745
 
-Epoch [90/200], val_loss_with_NEM: 37599421.2416
-Epoch [90/200], val_loss_without_NEM: 0.6073
+Epoch [90/200], val_loss_with_NEM: 14627194290.1760
+Epoch [90/200], val_loss_without_NEM: 164.6744
 
 
 
-Epoch [100/200], train_loss_with_NEM: 55563740.3749
-Epoch [100/200], train_loss_without_NEM: 1.4080
+Epoch [100/200], train_loss_with_NEM: 4618543897.6878
+Epoch [100/200], train_loss_without_NEM: 536.8781
 
-Epoch [100/200], val_loss_with_NEM: 12142143.6997
-Epoch [100/200], val_loss_without_NEM: 0.3593
+Epoch [100/200], val_loss_with_NEM: 347221744.4523
+Epoch [100/200], val_loss_without_NEM: 334.8606
 
 
 
-Epoch [110/200], train_loss_with_NEM: 52915256.5522
-Epoch [110/200], train_loss_without_NEM: 0.9126
+Epoch [110/200], train_loss_with_NEM: 1733158302.3689
+Epoch [110/200], train_loss_without_NEM: 739.6974
 
-Epoch [110/200], val_loss_with_NEM: 9785145.5504
-Epoch [110/200], val_loss_without_NEM: 0.4655
+Epoch [110/200], val_loss_with_NEM: 165257512.7808
+Epoch [110/200], val_loss_without_NEM: 235.4147
 
 
 
-Epoch [120/200], train_loss_with_NEM: 45169564.5531
-Epoch [120/200], train_loss_without_NEM: 0.4969
+Epoch [120/200], train_loss_with_NEM: 477260191.5685
+Epoch [120/200], train_loss_without_NEM: 564.9303
 
-Epoch [120/200], val_loss_with_NEM: 6539394.4328
-Epoch [120/200], val_loss_without_NEM: 0.2304
+Epoch [120/200], val_loss_with_NEM: 36673472.6432
+Epoch [120/200], val_loss_without_NEM: 442.5791
 
 
 
-Epoch [130/200], train_loss_with_NEM: 20432556836.4544
-Epoch [130/200], train_loss_without_NEM: 0.3632
+Epoch [130/200], train_loss_with_NEM: 222886097.3751
+Epoch [130/200], train_loss_without_NEM: 441.3691
 
-Epoch [130/200], val_loss_with_NEM: 104387506.2144
-Epoch [130/200], val_loss_without_NEM: 0.5801
+Epoch [130/200], val_loss_with_NEM: 10418604.2341
+Epoch [130/200], val_loss_without_NEM: 350.2165
 
 
 
-Epoch [140/200], train_loss_with_NEM: 394067374.2738
-Epoch [140/200], train_loss_without_NEM: 0.3162
+Epoch [140/200], train_loss_with_NEM: 163778557.8789
+Epoch [140/200], train_loss_without_NEM: 481.4679
 
-Epoch [140/200], val_loss_with_NEM: 635475.1225
-Epoch [140/200], val_loss_without_NEM: 0.2264
+Epoch [140/200], val_loss_with_NEM: 2289079.8725
+Epoch [140/200], val_loss_without_NEM: 957.7046
 
 
 
-Epoch [150/200], train_loss_with_NEM: 115275955.1095
-Epoch [150/200], train_loss_without_NEM: 49.6721
+Epoch [150/200], train_loss_with_NEM: 125399460.8384
+Epoch [150/200], train_loss_without_NEM: 872.1809
 
-Epoch [150/200], val_loss_with_NEM: 650032.6281
-Epoch [150/200], val_loss_without_NEM: 3.0809
+Epoch [150/200], val_loss_with_NEM: 1218579.2260
+Epoch [150/200], val_loss_without_NEM: 1910.1995
 
 
 
-Epoch [160/200], train_loss_with_NEM: 54491649.7600
-Epoch [160/200], train_loss_without_NEM: 9.4687
+Epoch [160/200], train_loss_with_NEM: 76821795.8400
+Epoch [160/200], train_loss_without_NEM: 518.2760
 
-Epoch [160/200], val_loss_with_NEM: 1345778.8777
-Epoch [160/200], val_loss_without_NEM: 1.6364
+Epoch [160/200], val_loss_with_NEM: 251788.1015
+Epoch [160/200], val_loss_without_NEM: 765.1356
 
 
 
-Epoch [170/200], train_loss_with_NEM: 46734374.4421
-Epoch [170/200], train_loss_without_NEM: 12.0634
+Epoch [170/200], train_loss_with_NEM: 42977235.7925
+Epoch [170/200], train_loss_without_NEM: 508.8691
 
-Epoch [170/200], val_loss_with_NEM: 1455223.9574
-Epoch [170/200], val_loss_without_NEM: 2.9292
+Epoch [170/200], val_loss_with_NEM: 202235.6224
+Epoch [170/200], val_loss_without_NEM: 1006.7264
 
 
 
-Epoch [180/200], train_loss_with_NEM: 36309105.1858
-Epoch [180/200], train_loss_without_NEM: 20.6102
+Epoch [180/200], train_loss_with_NEM: 17925018.2432
+Epoch [180/200], train_loss_without_NEM: 630.0182
 
-Epoch [180/200], val_loss_with_NEM: 817500.2264
-Epoch [180/200], val_loss_without_NEM: 0.6596
+Epoch [180/200], val_loss_with_NEM: 106994.5561
+Epoch [180/200], val_loss_without_NEM: 2700.4358
 
 
 
-Epoch [190/200], train_loss_with_NEM: 22487815.8546
-Epoch [190/200], train_loss_without_NEM: 4.7169
+Epoch [190/200], train_loss_with_NEM: 6982457.5104
+Epoch [190/200], train_loss_without_NEM: 822.7873
 
-Epoch [190/200], val_loss_with_NEM: 2131896.2816
-Epoch [190/200], val_loss_without_NEM: 0.4305
+Epoch [190/200], val_loss_with_NEM: 1655058.9796
+Epoch [190/200], val_loss_without_NEM: 1376.7418
 
 
 
-Epoch [200/200], train_loss_with_NEM: 16250935.0638
-Epoch [200/200], train_loss_without_NEM: 2.7081
+Epoch [200/200], train_loss_with_NEM: 3657475.0170
+Epoch [200/200], train_loss_without_NEM: 5103.1782
 
-Epoch [200/200], val_loss_with_NEM: 750016.7532
-Epoch [200/200], val_loss_without_NEM: 1.2728
+Epoch [200/200], val_loss_with_NEM: 2065244.1465
+Epoch [200/200], val_loss_without_NEM: 1783.6795
 
 
 

@@ -5,11 +5,13 @@ Input: LLM hidden states H from current layer (L, d)
 Output: Fused hidden states H_fused (L, d)
 
 1. Define fixed learnable queries Q_slots
-   - Q_slots contains 18 vectors
+   - Q_slots contains 34 vectors
    - Each vector represents a slot:
      - First 8 slots correspond to 8 instructions
-     - Next 2 slots correspond to operands op1 and op2
+     - Second 2 slots correspond to operands op1 and op2
+     - Next 16 slots correspond to mask for op 
      - Last 8 slots correspond to condition flags
+
 
 
 2. Project LLM hidden states H into K and V
