@@ -101,17 +101,8 @@ class InterpreterWithRegisters(nn.Module):
             lambda x, y: x / (y.abs() + 1e-6),
         ]
 
-    @staticmethod
-    def _renorm_probs(p, dim = -1, eps= 1e-8):
-        s = p.sum(dim=dim, keepdim=True)
-        return p / (s + eps)
-
-    def _apply_mask(self, op_feat_line, mask_line):
-        gate = torch.sigmoid(mask_line)         # (b,2,d)
-        masked = op_feat_line * gate
-        return masked, gate
-
-
+        self.ln = nn.LayerNorm(self.config.hidden_dim)
+        
     def forward(self, opcode_probs, registers, k_write, q_read, cond_distribution, gate):
         """
         opcode_prob (b,num_instructions,instruction_types)
@@ -123,10 +114,10 @@ class InterpreterWithRegisters(nn.Module):
 
         """
         b,lines,categories = opcode_probs.shape
-
+        
         record_lines = []
         for line in range(lines):
-            prob = self._renorm_probs(opcode_probs[:, line, :], dim=-1) #(b,n)
+            prob = opcode_probs[:, line, :] #(b,n)
             op_s = registers.read(q_read[:,line,:]) # (b,2,d)
             x = self.op1_proj(op_s[:, 0, :])  # (b,1)
             y = self.op2_proj(op_s[:, 1, :])  # (b,1)
@@ -138,7 +129,7 @@ class InterpreterWithRegisters(nn.Module):
                 outs.append(zi)
             outs = torch.stack(outs, dim=1) #(b,n,1)
             mix = torch.einsum('bi, bid->bd', prob, outs) #(b,1)
-            value = self.result_head(mix).unsqueeze(1)
+            value = self.ln(self.result_head(mix).unsqueeze(1))
 
             registers.write(value,k_write[:,line:line+1,:],gate[:,line:line+1,:])
 

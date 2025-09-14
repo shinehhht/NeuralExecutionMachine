@@ -6,7 +6,7 @@ from NEM.registers import Registers
 from NEM.featurePproj import FeatureProj,FeatureProjWithRegisters
 from NEM.interpreter import Interpreter,InterpreterWithRegisters
 from types import SimpleNamespace
-
+import math
 
 class NeuralExecutionModule(nn.Module):
     def __init__(self,config):
@@ -49,32 +49,109 @@ class NeuralExecutionModule(nn.Module):
         
         return fused_hidden_states
                 
-                
-class NeuralExecutionModuleWithRegisters(nn.Module):
-    def __init__(self,config):
+
+class GateProj(nn.Module):
+    def __init__(self,config,args):
         super().__init__()
         self.config = config
+        self.args = args
+        self.warmup_epochs = getattr(config, 'warmup_epochs', 30)
+        self.proj = nn.Linear(config.hidden_dim,1)
+        nn.init.zeros_(self.proj.weight)
+        nn.init.constant_(self.proj.bias, 0.0)
         
+    def schedule(self,gate,epoch):
+        
+        T1 = self.args.T1
+        T2 = self.args.T2
+        U1 = self.args.U1
+        L = self.args.L
+        U2 = self.args.U2
+        
+        
+        if epoch <= T1:
+            low, high = 0.0, U1
+        
+        elif epoch < T2:
+            alpha = (epoch - T1) / (T2 - T1)
+            low  = 0.0   + alpha * ( L - 0.0)
+            high = U2    + alpha * (1.0 - U2)
+    
+        else:
+            low, high = 0.0, 1.0
+        
+        
+        return low + (high - low) * gate
+    
+    def forward(self, hidden_states, epoch):
+        gate = torch.sigmoid(self.proj(hidden_states))
+        if epoch < self.warmup_epochs:
+            gamma = 0.5 * (1 + math.cos(math.pi * (1 - epoch / self.warmup_epochs)))
+        else:
+            gamma = 1.0
+        
+        if not self.args.constrain:
+            return gate * gamma, (gate * gamma)[0].item(), None
+        else:
+            final_gate = self.schedule((gate * gamma),epoch)
+            return final_gate,(gate * gamma)[0].item(), final_gate[0]
+    
+    def generate(self, hidden_states):
+        return torch.sigmoid(self.proj(hidden_states))
+             
+class NeuralExecutionModuleWithRegisters(nn.Module):
+    def __init__(self,config,args):
+        super().__init__()
+        self.config = config
+        self.args = args
         self.InitialParse = InitialParse(config)
         self.FeatureProj = FeatureProjWithRegisters(config)
         self.Interpreter = InterpreterWithRegisters(config)
         self.Fuse2Main = Prog2Transformer(config)
-       
+        self.Gate = GateProj(config,args)
+
+        self.ln_registers = nn.LayerNorm(self.config.hidden_dim)
         
-    def forward(self, hidden_states):
+    def forward(self, hidden_states,epoch):
+        batch_size = hidden_states.shape[0]
+        
+        registers = Registers(self.config, batch_size)
+        final_registers_gate, value_initial, k_initial, gate, k_write, q_read, opcode, cond = self.InitialParse(hidden_states)
+
+        registers.write(value_initial,k_initial)
+        
+        
+        opcode_probs, cond_distribution, gate = self.FeatureProj(opcode, cond, gate)
+        update_registers,program_details = self.Interpreter(opcode_probs, registers, k_write, q_read, cond_distribution, gate)
+
+        fusing_gate, origin_gate, processed_gate = self.Gate(final_registers_gate,epoch)
+        fusing_gate = fusing_gate.unsqueeze(-1)
+        
+        gated_updated_registers = self.ln_registers(fusing_gate * update_registers)
+        
+        fused_hidden_states = self.Fuse2Main(hidden_states, gated_updated_registers)
+
+        return fused_hidden_states, origin_gate, processed_gate
+    
+    def generate(self, hidden_states):
         batch_size = hidden_states.shape[0]
         
         registers = Registers(self.config, batch_size)
         
-        value_initial, k_initial, gate, k_write, q_read, opcode, cond = self.InitialParse(hidden_states)
+        final_registers_gate, value_initial, k_initial, gate, k_write, q_read, opcode, cond = self.InitialParse(hidden_states)
+
         registers.write(value_initial,k_initial)
         opcode_probs, cond_distribution, gate = self. FeatureProj(opcode, cond, gate)
         update_registers,program_details = self.Interpreter(opcode_probs, registers, k_write, q_read, cond_distribution, gate)
-       
-        fused_hidden_states = self.Fuse2Main(hidden_states, update_registers)
+        
+        update_registers = self.ln_registers(update_registers)
+        fusing_gate = self.Gate.generate(final_registers_gate).unsqueeze(-1)
+        
+        gated_updated_registers = fusing_gate * update_registers
+        fused_hidden_states = self.Fuse2Main(hidden_states, gated_updated_registers)
 
         return fused_hidden_states
-        
+    
                       
 if __name__ == '__main__':
     hidden_states = torch.randn(2, 10, 1024, dtype=torch.float32)

@@ -21,7 +21,20 @@ config = SimpleNamespace(
    n_regs = 8
 )
 
-
+class GateProj(nn.Module):
+    def __init__(self,config):
+        super().__init__()
+        self.config = config
+        
+        self.proj = nn.Linear(config.hidden_dim,1)
+        nn.init.zeros_(self.gate_proj.weight)
+        nn.init.constant_(self.gate_proj.bias, -10.0)
+    
+    def forward(self, hidden_states, epoch):
+        gate = torch.sigmoid(self.proj(hidden_states))
+        gamma = 0.0 if epoch == 0 else 1.0     
+        return gate * gamma
+        
 class NeuralExecutionModuleWithRegisters(nn.Module):
     def __init__(self,config):
         super().__init__()
@@ -31,9 +44,11 @@ class NeuralExecutionModuleWithRegisters(nn.Module):
         self.FeatureProj = FeatureProjWithRegisters(config)
         self.Interpreter = InterpreterWithRegisters(config)
         self.Fuse2Main = Prog2Transformer(config)
-       
+        self.Gate = GateProj(config)
+
+
         
-    def forward(self, hidden_states):
+    def forward(self, hidden_states,epoch):
         batch_size = hidden_states.shape[0]
         
         registers = Registers(self.config, batch_size)
@@ -43,7 +58,9 @@ class NeuralExecutionModuleWithRegisters(nn.Module):
         registers.write(value_initial,k_initial)
         opcode_probs, cond_distribution, gate = self. FeatureProj(opcode, cond, gate)
         update_registers,program_details = self.Interpreter(opcode_probs, registers, k_write, q_read, cond_distribution, gate)
-       
+
+        fusing_gate = self.Gate(hidden_states,epoch)
+        print(f'fused_gate shape {fusing_gate.shape}')
         fused_hidden_states = self.Fuse2Main(hidden_states, update_registers)
 
         return fused_hidden_states

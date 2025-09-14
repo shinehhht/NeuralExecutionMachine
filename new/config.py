@@ -10,5 +10,8 @@ config = SimpleNamespace(
    num_cycles = 2,
    instruction_types = 4,
    total_slots_registers=26,
-   n_regs = 4
+   n_regs = 4,
+   vocab_size = 10,
+   input_bits = 3,
+   output_bits = 4
 )

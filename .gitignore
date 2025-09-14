@@ -2,9 +2,6 @@ alpaca-cleaned/
 tinyllama/
 src/training/mlp-test/
 src/training/arithmetic_dataset.json
-new/training/multi_compare_with_nem_ornot
-new/training/register_compare_with_nem_ornot
-new/training/compare_with_nem_ornot.txt
-new/training/multi_compare_with_nem_ornot.txt
-new/training/register_compare_with_nem_ornot.txt
+new/training/log/
+new/training/record/
 *.pth

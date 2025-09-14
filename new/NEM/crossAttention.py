@@ -107,13 +107,14 @@ class InitialParse(CrossAttention):
         super().__init__(config)
          
         # Q
-        self.slot_queries = nn.Parameter(torch.randn(config.total_slots_registers, config.hidden_dim))
+        total_slots_with_registers = 2 + 6 * config.num_instructions + 1
+        self.slot_queries = nn.Parameter(torch.randn(total_slots_with_registers, config.hidden_dim))
+        self.ln = nn.LayerNorm(config.hidden_dim)
         
     def forward(self, hidden_state):
         """
         hidden_state (b,l,d)
         """
-        assert self.config.total_slots_registers == 2 + 6 * self.config.num_instructions
         batch_size = hidden_state.shape[0]
         
         K = self.k_proj(hidden_state)  # (b, l, d)
@@ -121,7 +122,7 @@ class InitialParse(CrossAttention):
         
         Q = self.slot_queries.unsqueeze(0).expand(batch_size,-1,-1) # (b,slots,d)
         
-        Z = self.multihead_cross_attn(Q,K,V) # (b,slots,d)
+        Z = self.ln(self.multihead_cross_attn(Q,K,V)) # (b,slots,d)
         
         
         instruction_tokens = self.config.num_instructions
@@ -129,11 +130,12 @@ class InitialParse(CrossAttention):
         # for initialize registers
         value_initial = Z[:, 0:1, :]
         k_initial = Z[:, 1:2, :]
+        final_registers_gate = Z[:,2,:]
         
-        gate = Z[:,2:2+instruction_tokens, :]
-        k_write = Z[:, 2+instruction_tokens:2+2*instruction_tokens, :]
-        q_read = Z[:, 2+2*instruction_tokens:2+4*instruction_tokens, :]
-        opcode = Z[:, 2+4*instruction_tokens:2+5*instruction_tokens, :]
+        gate = Z[:,3:3+instruction_tokens, :]
+        k_write = Z[:, 3+instruction_tokens:3+2*instruction_tokens, :]
+        q_read = Z[:, 3+2*instruction_tokens:3+4*instruction_tokens, :]
+        opcode = Z[:, 3+4*instruction_tokens:3+5*instruction_tokens, :]
         cond = Z[:, -instruction_tokens:, :]
         
-        return value_initial, k_initial, gate, k_write, q_read, opcode, cond
+        return final_registers_gate, value_initial, k_initial, gate, k_write, q_read, opcode, cond
