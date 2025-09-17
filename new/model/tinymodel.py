@@ -53,11 +53,11 @@ class SimpleTransformerBlock(nn.Module):
         return x
 
 class ModelWithoutNEM(nn.Module):
-    def __init__(self,config):
+    def __init__(self,config,args):
         super().__init__()
         self.config = config
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_dim)
-        self.output = nn.Linear(config.hidden_dim, config.output_bits*10)
+        self.output = nn.Linear(config.hidden_dim, args.output_bits*10)
         
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)
@@ -87,8 +87,7 @@ class MiniModel(nn.Module):
         self.config = config
 
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_dim)
-        self.output = nn.Linear(config.hidden_dim, config.output_bits*10)
-        
+        self.output = nn.Linear(config.hidden_dim, args.output_bits*10)
         self.NEM = NeuralExecutionModuleWithRegisters(config,args)
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)

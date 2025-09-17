@@ -29,4 +29,4 @@ def generate_add_dataset(N, digits, save_path='addition_dataset.pt'):
     torch.save(dataset_dict, save_path)
    
    
-generate_add_dataset(N=10000, digits=3, save_path='./simpleTransformer_test/multibit_add_3bit_dataset_10k.pt')
+generate_add_dataset(N=100000, digits=15, save_path='./simpleTransformer_test/multibit_add_15bit_dataset_100k.pt')

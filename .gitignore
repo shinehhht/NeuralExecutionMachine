@@ -4,4 +4,5 @@ src/training/mlp-test/
 src/training/arithmetic_dataset.json
 new/training/log/
 new/training/record/
+new/training/log1/
 *.pth

@@ -57,9 +57,43 @@ class GateProj(nn.Module):
         self.args = args
         self.warmup_epochs = getattr(config, 'warmup_epochs', 30)
         self.proj = nn.Linear(config.hidden_dim,1)
+
         nn.init.zeros_(self.proj.weight)
         nn.init.constant_(self.proj.bias, 0.0)
         
+        self.ema_decay = args.gate_decay
+        self.alpha = args.gate_alpha
+        self.register_buffer("ema_gate_portion", None)
+        
+    
+    def forward(self, hidden_states, epoch):
+        
+        if epoch < self.warmup_epochs:
+            gamma = 0.5 * (1 + math.cos(math.pi * (1 - epoch / self.warmup_epochs))) + self.args.eps
+        else:
+            gamma = 1.0
+            
+        current_gate = torch.sigmoid(self.proj(hidden_states))
+        
+        if self.args.gate_ema:
+            if self.ema_gate_portion is None:
+                gate = current_gate
+                with torch.no_grad():
+                    self.ema_gate_portion = current_gate.detach().clone()
+            else:
+                gate = self.alpha * self.ema_gate_portion.detach() + (1 - self.alpha) * current_gate
+                with torch.no_grad():
+                    self.ema_gate_portion.mul_(self.ema_decay)
+                    self.ema_gate_portion.add_(current_gate.detach(), alpha=1-self.ema_decay)
+        else:
+            gate = current_gate
+            
+        if not self.args.constrain:
+            return gate * gamma, (gate * gamma)[0].item(), None
+        else:
+            final_gate = self.schedule((gate * gamma),epoch)
+            return final_gate,(gate * gamma)[0].item(), final_gate[0]
+    
     def schedule(self,gate,epoch):
         
         T1 = self.args.T1
@@ -82,20 +116,6 @@ class GateProj(nn.Module):
         
         
         return low + (high - low) * gate
-    
-    def forward(self, hidden_states, epoch):
-        gate = torch.sigmoid(self.proj(hidden_states))
-        if epoch < self.warmup_epochs:
-            gamma = 0.5 * (1 + math.cos(math.pi * (1 - epoch / self.warmup_epochs)))
-        else:
-            gamma = 1.0
-        
-        if not self.args.constrain:
-            return gate * gamma, (gate * gamma)[0].item(), None
-        else:
-            final_gate = self.schedule((gate * gamma),epoch)
-            return final_gate,(gate * gamma)[0].item(), final_gate[0]
-    
     def generate(self, hidden_states):
         return torch.sigmoid(self.proj(hidden_states))
              
@@ -106,7 +126,7 @@ class NeuralExecutionModuleWithRegisters(nn.Module):
         self.args = args
         self.InitialParse = InitialParse(config)
         self.FeatureProj = FeatureProjWithRegisters(config)
-        self.Interpreter = InterpreterWithRegisters(config)
+        self.Interpreter = InterpreterWithRegisters(config,args)
         self.Fuse2Main = Prog2Transformer(config)
         self.Gate = GateProj(config,args)
 
@@ -127,8 +147,9 @@ class NeuralExecutionModuleWithRegisters(nn.Module):
         fusing_gate, origin_gate, processed_gate = self.Gate(final_registers_gate,epoch)
         fusing_gate = fusing_gate.unsqueeze(-1)
         
-        gated_updated_registers = self.ln_registers(fusing_gate * update_registers)
         
+        # gated_updated_registers = self.ln_registers(fusing_gate * update_registers)
+        gated_updated_registers = fusing_gate * self.ln_registers(update_registers)
         fused_hidden_states = self.Fuse2Main(hidden_states, gated_updated_registers)
 
         return fused_hidden_states, origin_gate, processed_gate

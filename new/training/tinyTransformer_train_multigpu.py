@@ -83,7 +83,8 @@ def train_ddp(args):
     if rank == 0:
         writer = SummaryWriter(log_dir=f'./training/log/{file_name}_ddp')
     
-    dataset = AddMultibitDataset('./training/simpleTransformer_test/multibit_add_3bit_dataset_10k.pt')
+    dataset_file_path = './training/simpleTransformer_test/'+ args.dataset_file
+    dataset = AddMultibitDataset(dataset_file_path)
     train_len = int(0.8 * len(dataset))
     val_len = len(dataset) - train_len
     train_set, val_set = random_split(dataset, [train_len, val_len],generator=torch.Generator().manual_seed(42))
@@ -92,7 +93,7 @@ def train_ddp(args):
         train_set, val_set, batch_size, rank, world_size
     )
     
-    model_without_NEM = ModelWithoutNEM(config).to(device)
+    model_without_NEM = ModelWithoutNEM(config,args).to(device)
     model_with_NEM = MiniModel(config,args).to(device)
     
     model_with_NEM_state_dict = model_with_NEM.state_dict()
@@ -102,11 +103,45 @@ def train_ddp(args):
     for name, param in model_without_NEM_state_dict.items():
         if name in model_with_NEM_state_dict and 'NEM' not in name:
             model_with_NEM_state_dict[name] = param
-     
-    model_with_NEM = DDP(model_with_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
-    model_without_NEM = DDP(model_without_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
-          
-    optimizer_with_NEM = optim.Adam(
+            
+
+    
+    if args.multi_decay:
+        decay_param = [p for n,p in model_with_NEM.named_parameters() if "Gate" not in n]
+        nodecay_param = list(model_with_NEM.NEM.Gate.parameters())
+        
+        param_groups = [
+        {"params": decay_param, "weight_decay":args.weight_decay},
+        {"params": nodecay_param, "weight_decay": 0.0},  
+        ]
+        
+        optimizer_with_NEM = torch.optim.AdamW(
+            param_groups, 
+            lr = args.lr,
+            betas = args.betas
+            )
+         
+    elif args.multi_lr:
+        gate_params = list(model_with_NEM.NEM.Gate.parameters())
+        nem_params = [p for n,p in model_with_NEM.NEM.named_parameters() if "Gate" not in n]
+        other_params = [p for n,p in model_with_NEM.named_parameters() if "NEM" not in n]
+        
+        lr_gate = args.lr * 0.1
+        
+        param_groups = [
+        {"params": gate_params, "lr": lr_gate},
+        {"params": nem_params,  "lr": args.lr},
+        {"params": other_params, "lr": args.lr} 
+        ]
+         
+        optimizer_with_NEM = optim.Adam(
+            param_groups,
+            weight_decay = args.weight_decay,
+            betas = args.betas
+            )
+        
+    else:
+        optimizer_with_NEM = optim.Adam(
         model_with_NEM.parameters(), 
         lr = args.lr,
         weight_decay = args.weight_decay,
@@ -119,6 +154,11 @@ def train_ddp(args):
         weight_decay = args.weight_decay,
         betas = args.betas
         )
+
+        
+    model_with_NEM = DDP(model_with_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
+    model_without_NEM = DDP(model_without_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
+
     
     loss_fn = torch.nn.CrossEntropyLoss() 
 
@@ -163,6 +203,7 @@ def train_ddp(args):
             optimizer_with_NEM.zero_grad()
             loss.backward()
             
+            
             gn_gate,rms_gate = grad_norm(model_with_NEM.module.NEM.Gate.named_parameters(),except_gate=False)
             gn_total, rms_total = grad_norm(model_with_NEM.module.NEM.named_parameters(),except_gate=True)
             if rank==0 and batch == 0:
@@ -177,7 +218,7 @@ def train_ddp(args):
                     },
                     global_step=epoch
                 )
-                
+            
             optimizer_with_NEM.step()
 
 
@@ -215,11 +256,13 @@ def train_ddp(args):
             writer.add_scalar('TrainingAccuracy/Accuracy with NEM', epoch_avg_acc1, epoch)
             writer.add_scalar('TrainingAccuracy/Accuracy without NEM', epoch_avg_acc2, epoch)
             
+            
             if args.constrain:
                 writer.add_scalar('Gate/Origin gate', origin_gate, epoch)
                 writer.add_scalar('Gate/Processed gate', processed_gate, epoch)
             else:
                 writer.add_scalar('Gate', origin_gate, epoch)
+            
             
             if (epoch+1)%5 == 0:
                 with open(f'./training/record/{file_name}.txt','a')as f:
@@ -295,17 +338,26 @@ def train_ddp(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=True)
+    parser.add_argument('--dataset_file', type=str, required=True)
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument("--lr", "-l", type=float, required=True, help=" ")
     parser.add_argument("--weight_decay", "-w", type=float, required=True, help=" ")
     parser.add_argument("--betas", "-b", type=float, nargs=2, default=(0.9, 0.999))
     parser.add_argument("--constrain","-c",action="store_true",help="default false")
+    parser.add_argument("--multi_decay",action="store_true",help="default false")
+    parser.add_argument("--multi_lr",action="store_true",help="default false")
     parser.add_argument('--T1', type=int, default=30)
     parser.add_argument("--T2", type=int, default=300)
     parser.add_argument("--U1", "-u", type=float, required=True, help=" ")
     parser.add_argument("--L", type=float )
     parser.add_argument("--U2", "-u2", type=float, required=True, help=" ")
+    parser.add_argument("--eps", type=float,default=1e-5)
+    parser.add_argument("--gate_ema","-e",action="store_true",help="default false")
+    parser.add_argument("--gate_decay", type=float)
+    parser.add_argument("--gate_alpha", type=float)
+    parser.add_argument('--input_bits', type=int)
+    parser.add_argument('--output_bits', type=int)
     
     args = parser.parse_args()
     

@@ -85,19 +85,21 @@ class Interpreter(nn.Module):
         return final_result, procedure
 
 class InterpreterWithRegisters(nn.Module):
-    def __init__(self, config,policy=None):
+    def __init__(self, config,args):
         super().__init__()
         self.config = config
 
         self.op1_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, 1))
         self.op2_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, 1))
         self.result_head = nn.Sequential(nn.Linear(1, config.hidden_dim))
-        self.final_policy = policy
 
+        max_add_bit = args.output_bits + 1
+        max_mul_bit = 2 * args.input_bits + 1
+        
         self._ops = [
-            lambda x, y: (x + y) % (2**4),
+            lambda x, y: (x + y) % (10**max_add_bit),
             lambda x, y: x - y,
-            lambda x, y: (x * y) % (2**4),
+            lambda x, y: (x * y),
             lambda x, y: x / (y.abs() + 1e-6),
         ]
 
