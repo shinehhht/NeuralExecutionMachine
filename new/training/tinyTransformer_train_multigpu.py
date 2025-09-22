@@ -155,7 +155,14 @@ def train_ddp(args):
         betas = args.betas
         )
 
-        
+    """
+    total_params = sum(p.numel() for p in model_with_NEM.parameters())
+    NEM_params = sum(p.numel() for p in model_with_NEM.NEM.parameters())
+    with open ('param.txt' ,'a')as f:
+        f.write(f"Total parameters: {total_params}\n")
+        f.write(f"NEM parameters: {NEM_params}\n\n\n")
+    """
+    
     model_with_NEM = DDP(model_with_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
     model_without_NEM = DDP(model_without_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
 
@@ -190,10 +197,10 @@ def train_ddp(args):
             labels  = labels.to(device, non_blocking=True)   
 
             if rank == 0:   
-                logits,origin_gate,processed_gate = model_with_NEM(inputs,epoch) # output (B,10,bits)
+                logits,origin_gate,processed_gate, program = model_with_NEM(inputs,epoch) # output (B,10,bits)
                 logits = logits.transpose(1,2)
             else:
-                logits,_,_ = model_with_NEM(inputs,epoch) # output (B,10,bits)
+                logits,_,_,_ = model_with_NEM(inputs,epoch) # output (B,10,bits)
                 logits = logits.transpose(1,2)
             loss = loss_fn(logits,labels)
             
@@ -204,17 +211,17 @@ def train_ddp(args):
             loss.backward()
             
             
-            gn_gate,rms_gate = grad_norm(model_with_NEM.module.NEM.Gate.named_parameters(),except_gate=False)
-            gn_total, rms_total = grad_norm(model_with_NEM.module.NEM.named_parameters(),except_gate=True)
+            gn_gate,rms_gate = grad_norm(model_with_NEM.module.NEM3.Gate.named_parameters(),except_gate=False)
+            gn_total, rms_total = grad_norm(model_with_NEM.module.NEM3.named_parameters(),except_gate=True)
             if rank==0 and batch == 0:
                 writer.add_scalar('grad_norm/L2/Gate', gn_gate, epoch)
-                writer.add_scalar('grad_norm/L2/NEM except Gate', gn_total, epoch)
+                writer.add_scalar('grad_norm/L2/NEM3 except Gate', gn_total, epoch)
                 
                 writer.add_scalars(
                     main_tag='grad_norm/RMS',
                     tag_scalar_dict={
                         'Gate':           rms_gate,
-                        'NEM_except_Gate': rms_total
+                        'NEM3_except_Gate': rms_total
                     },
                     global_step=epoch
                 )
@@ -264,10 +271,30 @@ def train_ddp(args):
                 writer.add_scalar('Gate', origin_gate, epoch)
             
             
-            if (epoch+1)%5 == 0:
+            if (epoch+1)%100 == 0:
+                """
                 with open(f'./training/record/{file_name}.txt','a')as f:
                     f.write(f"Epoch [{epoch+1}/{epochs}], train_loss_with_NEM: {epoch_avg_loss1:.4f}, acc: {epoch_avg_acc1:.4f}\n")
                     f.write(f"Epoch [{epoch+1}/{epochs}], train_loss_without_NEM: {epoch_avg_loss2:.4f}, acc: {epoch_avg_acc2:.4f}\n\n")
+                """
+                data_example = program['DATA'].tolist()
+                inputs_bits = args.input_bits
+                x1 = ''.join(map(str, data_example[:inputs_bits]))
+                x2 = ''.join(map(str, data_example[inputs_bits:]))
+                ans = int(x1) + int(x2)
+                
+                with open(f'./training/record/program/{file_name}.txt','a')as f:
+                    f.write("\n\n\n")
+                    f.write(f"Epoch [{epoch+1}/{epochs}]\nData:{x1}  {x2}\nAnswer:{ans}\nProgram\n")
+                    for i in range(3):
+                        f.write(f'NEM{i+1}:\n')
+                        prog = program[f'NEM{i+1}']['per_line']
+                        for line in prog:
+                            f.write(f"{line}\n")
+                        print('\n')
+        
+                            
+                    
              
             
         if (epoch + 1) % 10 == 0:
@@ -322,12 +349,12 @@ def train_ddp(args):
                 writer.add_scalar('ValAccuracy/Accuracy with NEM', epoch_avg_val_acc1, epoch)
                 writer.add_scalar('ValAccuracy/Accuracy without NEM', epoch_avg_val_acc2, epoch)
                 
-            
+                """
                 if (epoch+1)%10 == 0:
-                    with open(f'./training/record/{file_name}.txt','a')as f:
+                    with open(f'./training/record/results/{file_name}.txt','a')as f:
                         f.write(f"Epoch [{epoch+1}/{epochs}], val_loss_with_NEM: {epoch_avg_val_loss1:.4f}, acc: {epoch_avg_val_acc1:.4f}\n")
                         f.write(f"Epoch [{epoch+1}/{epochs}], val_loss_without_NEM: {epoch_avg_val_loss2:.4f}, acc: {epoch_avg_val_acc2:.4f}\n\n\n\n")
-                        
+                """
                     
     
     if rank == 0 and writer is not None:

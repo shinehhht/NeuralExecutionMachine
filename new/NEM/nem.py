@@ -152,7 +152,7 @@ class NeuralExecutionModuleWithRegisters(nn.Module):
         gated_updated_registers = fusing_gate * self.ln_registers(update_registers)
         fused_hidden_states = self.Fuse2Main(hidden_states, gated_updated_registers)
 
-        return fused_hidden_states, origin_gate, processed_gate
+        return fused_hidden_states, origin_gate, processed_gate, program_details
     
     def generate(self, hidden_states):
         batch_size = hidden_states.shape[0]

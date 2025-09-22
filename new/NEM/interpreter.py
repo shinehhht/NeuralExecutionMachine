@@ -97,7 +97,7 @@ class InterpreterWithRegisters(nn.Module):
         max_mul_bit = 2 * args.input_bits + 1
         
         self._ops = [
-            lambda x, y: (x + y) % (10**max_add_bit),
+            lambda x, y: (x + y),
             lambda x, y: x - y,
             lambda x, y: (x * y),
             lambda x, y: x / (y.abs() + 1e-6),
@@ -135,10 +135,12 @@ class InterpreterWithRegisters(nn.Module):
 
             registers.write(value,k_write[:,line:line+1,:],gate[:,line:line+1,:])
 
+            
             record_lines.append({
-                "opcode_probs_line": prob,   # (B,n)
-                "arith_x": x, "arith_y": y,
-                "outs_arith": outs,
+                "opcode_probs_line": prob[0].tolist(),   
+                "arith_x": x[0].item(), "arith_y": y[0].item(),
+                "outs_arith": outs[0].tolist(),
+                "actual_return_value": mix[0].item()
             })
 
 

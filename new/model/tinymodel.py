@@ -88,7 +88,9 @@ class MiniModel(nn.Module):
 
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_dim)
         self.output = nn.Linear(config.hidden_dim, args.output_bits*10)
-        self.NEM = NeuralExecutionModuleWithRegisters(config,args)
+        self.NEM1 = NeuralExecutionModuleWithRegisters(config,args)
+        self.NEM2 = NeuralExecutionModuleWithRegisters(config,args)
+        self.NEM3 = NeuralExecutionModuleWithRegisters(config,args)
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)
         self.transformer_block3 = SimpleTransformerBlock(config)
@@ -98,36 +100,42 @@ class MiniModel(nn.Module):
         """
         x (b,10)
         """
+        
         b = x.size(0)
         parse2hidden = self.embedding(x)
         
         hidden_state1 = self.transformer_block1(parse2hidden)
-        #print(f'hidden 1 shape {hidden_state1.shape}')
-        fused_hidden_states1,_,_ = self.NEM(hidden_state1,epoch)
+        fused_hidden_states1,_,_,program_details1 = self.NEM1(hidden_state1,epoch)
         
         hidden_state2 = self.transformer_block2(fused_hidden_states1)
-        fused_hidden_states2,_,_ = self.NEM(hidden_state2,epoch)
+        fused_hidden_states2,_,_,program_details2 = self.NEM2(hidden_state2,epoch)
         
         hidden_state3 = self.transformer_block3(fused_hidden_states2)
-        fused_hidden_states3, origin_gate, processed_gate = self.NEM(hidden_state3,epoch) # (b,10,d)
+        fused_hidden_states3, origin_gate, processed_gate,program_details3 = self.NEM3(hidden_state3,epoch) # (b,10,d)
+        
+        
         #print(f'fused hidden state {fused_hidden_states3.shape}')
         output = self.output(fused_hidden_states3[:,-1,:]).view(b,-1,10) # (b,bits,10)
-    
-        return output, origin_gate, processed_gate
+        program = {
+            'DATA':x[0],
+            'NEM1':program_details1,
+            'NEM2':program_details2,
+            'NEM3':program_details3
+        }
+        return output, origin_gate, processed_gate, program
     
     def generate(self,x):
         b = x.size(0)
         parse2hidden = self.embedding(x)
         
         hidden_state1 = self.transformer_block1(parse2hidden)
-        #print(f'hidden 1 shape {hidden_state1.shape}')
-        fused_hidden_states1 = self.NEM.generate(hidden_state1)
+        fused_hidden_states1 = self.NEM1.generate(hidden_state1)
         
         hidden_state2 = self.transformer_block2(fused_hidden_states1)
-        fused_hidden_states2 = self.NEM.generate(hidden_state2)
+        fused_hidden_states2 = self.NEM2.generate(hidden_state2)
         
         hidden_state3 = self.transformer_block3(fused_hidden_states2)
-        fused_hidden_states3 = self.NEM.generate(hidden_state3) # (b,2,d)
+        fused_hidden_states3 = self.NEM3.generate(hidden_state3) # (b,2,d)
         #print(f'fused hidden state {fused_hidden_states3.shape}')
         output = self.output(fused_hidden_states3[:,-1,:]).view(b,-1,10)
         

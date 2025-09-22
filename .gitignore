@@ -5,4 +5,7 @@ src/training/arithmetic_dataset.json
 new/training/log/
 new/training/record/
 new/training/log1/
+new/training/log2/
+new/training/log3multinem/
+
 *.pth
