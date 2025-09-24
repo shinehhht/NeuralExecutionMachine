@@ -28,7 +28,6 @@ def setup_ddp():
 def cleanup():
     dist.destroy_process_group()
     
-
 def make_loaders_ddp(train_set, val_set, batch_size, rank, world_size, num_workers=4):
     
     train_sampler = DistributedSampler(
@@ -283,15 +282,24 @@ def train_ddp(args):
                 x2 = ''.join(map(str, data_example[inputs_bits:]))
                 ans = int(x1) + int(x2)
                 
+                target_keys = {'arith_x', 'arith_y', 'actual_return_value'}
                 with open(f'./training/record/program/{file_name}.txt','a')as f:
                     f.write("\n\n\n")
                     f.write(f"Epoch [{epoch+1}/{epochs}]\nData:{x1}  {x2}\nAnswer:{ans}\nProgram\n")
                     for i in range(3):
                         f.write(f'NEM{i+1}:\n')
                         prog = program[f'NEM{i+1}']['per_line']
-                        for line in prog:
-                            f.write(f"{line}\n")
-                        print('\n')
+                        for i,line in enumerate(prog):
+                            f.write(f'\nCode line {i}\n')
+                            for key, value in line.items():
+                                if key in target_keys:
+                                    f.write(f"********* {key} *********\n")
+                                    for l in value:
+                                        f.write(f"{l}\n")
+                                else:
+                                    f.write(f"********* {key} *********\n{value}\n")
+                            f.write('\n')
+                        f.write('\n\n\n\n')
         
                             
                     
@@ -385,6 +393,7 @@ if __name__ == '__main__':
     parser.add_argument("--gate_alpha", type=float)
     parser.add_argument('--input_bits', type=int)
     parser.add_argument('--output_bits', type=int)
+    parser.add_argument('--input_l_bits', type=int)
     
     args = parser.parse_args()
     

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from NEM.instructions import Add, Sub
 
 class Interpreter(nn.Module):
     def __init__(self, config,policy=None):
@@ -141,6 +141,72 @@ class InterpreterWithRegisters(nn.Module):
                 "arith_x": x[0].item(), "arith_y": y[0].item(),
                 "outs_arith": outs[0].tolist(),
                 "actual_return_value": mix[0].item()
+            })
+
+
+        procedure = {
+            "per_line": record_lines,
+        }
+        return registers.registers, procedure
+    
+    
+class InterpreterWithRegistersAndKbit(nn.Module):
+    def __init__(self, config,args):
+        super().__init__()
+        self.config = config
+        self.k = config.k_bits
+        self.l = args.input_l_bits
+        
+        numerical_feature_space = self.l*self.k
+
+        self.op1_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, numerical_feature_space))
+        self.op2_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, numerical_feature_space))
+        self.result_head = nn.Sequential(nn.Linear(numerical_feature_space, config.hidden_dim))
+        
+        self._ops = [
+            Add(config, args),
+            Sub(config, args)
+        ]
+
+        self.ln = nn.LayerNorm(self.config.hidden_dim)
+        
+    def forward(self, opcode_probs, registers, k_write, q_read, cond_distribution, gate):
+        """
+        opcode_prob (b,num_instructions,instruction_types)
+        registers (b,n_reg,d)
+        k_write (b,1,d)
+        q_read (b,2,d)
+        cond_distributions (b,num_instructions,x)
+        gate (b,1,1)
+
+        """
+        b,lines,categories = opcode_probs.shape
+        
+        record_lines = []
+        for line in range(lines):
+            prob = opcode_probs[:, line, :] #(b,n)
+            op_s = registers.read(q_read[:,line,:]) # (b,2,d)
+            x = F.softmax(self.op1_proj(op_s[:, 0, :]).reshape(b,self.l,self.k),dim=-1)  # (b,l,k)
+            y = F.softmax(self.op2_proj(op_s[:, 1, :]).reshape(b,self.l,self.k),dim=-1)  # (b,l,k)
+
+            outs = []
+
+            for i in range(categories):
+                zi = self._ops[i](x, y) # (b,l,k)
+                outs.append(zi)
+            outs = torch.stack(outs, dim=1) #(b,n,l,k)
+            mix = torch.einsum('bn, bnlk->blk', prob, outs) #(b,l,k)
+            #print(f'mix shape is {mix.shape}')
+            mix1 = mix.reshape(b,-1)
+            value = self.ln(self.result_head(mix1).unsqueeze(1))
+
+            registers.write(value,k_write[:,line:line+1,:],gate[:,line:line+1,:])
+
+            
+            record_lines.append({
+                "opcode_probs_line": prob[0].tolist(),   
+                "arith_x": x[0].tolist(), "arith_y": y[0].tolist(),
+                "actual_return_value": mix[0].tolist()
             })
 
 

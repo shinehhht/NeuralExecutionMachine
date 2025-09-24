@@ -16,13 +16,6 @@ import argparse
 from torch.utils.tensorboard import SummaryWriter
 
 
-dataset = AddMultibitDataset('./training/simpleTransformer_test/multibit_add_3bit_dataset_1k.pt')
-
-train_len = int(0.8 * len(dataset))
-val_len = len(dataset) - train_len
-train_set, val_set = random_split(dataset, [train_len, val_len],generator=torch.Generator().manual_seed(42))
-
-
 def make_loaders(train_set, val_set, batch_size, num_workers=4):
     train_sampler = val_sampler = None
     shuffle_train = True
@@ -41,16 +34,22 @@ def make_loaders(train_set, val_set, batch_size, num_workers=4):
 
 def train(args):
     file_name = args.file+'_'+str(args.lr)+'_'+str(args.betas)+'_'+str(args.weight_decay)
-
-    epochs = args.epochs
-    writer = SummaryWriter(log_dir=f'./training/{file_name}')
     
-    batch_size = 512
+    epochs = args.epochs
+    writer = SummaryWriter(log_dir=f'./training/log/{file_name}')
+    
+    batch_size = args.batch_size
+
+    dataset_file_path = './training/simpleTransformer_test/'+ args.dataset_file
+    dataset = AddMultibitDataset(dataset_file_path)
+    train_len = int(0.8 * len(dataset))
+    val_len = len(dataset) - train_len
+    train_set, val_set = random_split(dataset, [train_len, val_len],generator=torch.Generator().manual_seed(42))
     train_loader, val_loader = make_loaders(train_set, val_set, batch_size)
 
-    
-    model_without_NEM = ModelWithoutNEM(config).to(device)
-    model_with_NEM =MiniModel(config).to(device)
+
+    model_without_NEM = ModelWithoutNEM(config,args).to(device)
+    model_with_NEM =MiniModel(config,args).to(device)
     
     model_with_NEM_state_dict = model_with_NEM.state_dict()
     model_without_NEM_state_dict = model_without_NEM.state_dict()
@@ -59,15 +58,11 @@ def train(args):
     for name, param in model_without_NEM_state_dict.items():
         if name in model_with_NEM_state_dict and 'NEM' not in name:
             model_with_NEM_state_dict[name] = param
-    
-    gate_params = list(model_with_NEM.NEM.Gate.parameters())
-    nem_params = [p for n,p in model_with_NEM.named_parameters() if "Gate" not in n]
-   
-    lr_gate = args.lr * 0.5
-    lr_nem = args.lr * 5
+       
+
     optimizer_with_NEM = optim.Adam(
-        [{"params": gate_params, "lr": lr_gate},     
-        {"params": nem_params,  "lr": lr_nem}, ],
+        model_with_NEM.parameters(), 
+        lr = args.lr,
         weight_decay = args.weight_decay,
         betas = args.betas
         )
@@ -104,7 +99,9 @@ def train(args):
             labels  = labels.to(device, non_blocking=True)   
 
                 
-            logits = model_with_NEM(inputs,epoch,batch,file_name,writer).transpose(1,2) # output (B,10,bits)
+            logits,origin_gate,processed_gate, program = model_with_NEM(inputs,epoch) # output (B,10,bits)
+            logits = logits.transpose(1,2)
+            
             loss = loss_fn(logits,labels)
             
             total_correct1 += count_correct_multibits(labels,logits)
@@ -112,17 +109,20 @@ def train(args):
             num_samples += batch_size
             optimizer_with_NEM.zero_grad()
             loss.backward()
-            gn_gate,rms_gate = grad_norm(model_with_NEM.NEM.Gate.named_parameters(),except_gate=False)
-            gn_total, rms_total = grad_norm(model_with_NEM.NEM.named_parameters(),except_gate=True)
+            
+            
+            gn_gate,rms_gate = grad_norm(model_with_NEM.NEM3.Gate.named_parameters(),except_gate=False)
+            gn_total, rms_total = grad_norm(model_with_NEM.NEM3.named_parameters(),except_gate=True)
+            
             if batch == 0:
                 writer.add_scalar('grad_norm/L2/Gate', gn_gate, epoch)
-                writer.add_scalar('grad_norm/L2/NEM except Gate', gn_total, epoch)
+                writer.add_scalar('grad_norm/L2/NEM3 except Gate', gn_total, epoch)
                 
                 writer.add_scalars(
                     main_tag='grad_norm/RMS',
                     tag_scalar_dict={
                         'Gate':           rms_gate,
-                        'NEM_except_Gate': rms_total
+                        'NEM3_except_Gate': rms_total
                     },
                     global_step=epoch
                 )
@@ -148,19 +148,51 @@ def train(args):
         epoch_avg_acc1 = total_correct1 / max(1, num_samples)
         epoch_avg_acc2 = total_correct2 / max(1, num_samples)
         
-        writer.add_scalar('Training Loss with NEM', epoch_avg_loss1, epoch)
-        writer.add_scalar('Training Loss without NEM', epoch_avg_loss2, epoch)
+        writer.add_scalar('TrainingLoss/Loss with NEM', epoch_avg_loss1, epoch)
+        writer.add_scalar('TrainingLoss/Loss without NEM', epoch_avg_loss2, epoch)
         
-        writer.add_scalar('Accuracy with NEM', epoch_avg_acc1, epoch)
-        writer.add_scalar('Accuracy without NEM', epoch_avg_acc2, epoch)
+        writer.add_scalar('TrainingAccuracy/Accuracy with NEM', epoch_avg_acc1, epoch)
+        writer.add_scalar('TrainingAccuracy/Accuracy without NEM', epoch_avg_acc2, epoch)
         
         
-        if (epoch+1)%10 == 0:
-            with open(f'./training/{file_name}.txt','a')as f:
+        if args.constrain:
+            writer.add_scalar('Gate/Origin gate', origin_gate, epoch)
+            writer.add_scalar('Gate/Processed gate', processed_gate, epoch)
+        else:
+            writer.add_scalar('Gate', origin_gate, epoch)
+        
+        
+        if (epoch)%100 == 0:
+            """
+            with open(f'./training/record/{file_name}.txt','a')as f:
                 f.write(f"Epoch [{epoch+1}/{epochs}], train_loss_with_NEM: {epoch_avg_loss1:.4f}, acc: {epoch_avg_acc1:.4f}\n")
                 f.write(f"Epoch [{epoch+1}/{epochs}], train_loss_without_NEM: {epoch_avg_loss2:.4f}, acc: {epoch_avg_acc2:.4f}\n\n")
-             
+            """
+            data_example = program['DATA'].tolist()
+            inputs_bits = args.input_bits
+            x1 = ''.join(map(str, data_example[:inputs_bits]))
+            x2 = ''.join(map(str, data_example[inputs_bits:]))
+            ans = int(x1) + int(x2)
             
+            
+            target_keys = {'arith_x', 'arith_y', 'actual_return_value'}
+            with open(f'./training/record/program/{file_name}.txt','a')as f:
+                f.write("\n\n\n")
+                f.write(f"Epoch [{epoch+1}/{epochs}]\nData:{x1}  {x2}\nAnswer:{ans}\nProgram\n")
+                for i in range(3):
+                    f.write(f'NEM{i+1}:\n')
+                    prog = program[f'NEM{i+1}']['per_line']
+                    for i,line in enumerate(prog):
+                        f.write(f'\nCode line {i}\n')
+                        for key, value in line.items():
+                            if key in target_keys:
+                                f.write(f"********* {key} *********\n")
+                                for l in value:
+                                    f.write(f"{l}\n")
+                            else:
+                                f.write(f"********* {key} *********\n{value}\n")
+                        f.write('\n')
+                    f.write('\n\n\n\n')
             
             
         ######  model validate
@@ -204,30 +236,46 @@ def train(args):
         epoch_avg_val_acc1 = val_total_correct1 / max(1, val_num_samples)   
         epoch_avg_val_acc2 = val_total_correct2 / max(1, val_num_samples)   
         
-        writer.add_scalar('Validation Loss with NEM', epoch_avg_val_loss1, epoch)
-        writer.add_scalar('Validation Loss without NEM', epoch_avg_val_loss2, epoch)
+        writer.add_scalar('ValLoss/Loss with NEM', epoch_avg_val_loss1, epoch)
+        writer.add_scalar('ValLoss/Loss without NEM', epoch_avg_val_loss2, epoch)
         
-        writer.add_scalar('Validation Accuracy with NEM', epoch_avg_val_acc1, epoch)
-        writer.add_scalar('Validation Accuracy without NEM', epoch_avg_val_acc2, epoch)
+        writer.add_scalar('ValAccuracy/Accuracy with NEM', epoch_avg_val_acc1, epoch)
+        writer.add_scalar('ValAccuracy/Accuracy without NEM', epoch_avg_val_acc2, epoch)
         
-        
+        """
         if (epoch+1)%10 == 0:
             with open(f'./training/{file_name}.txt','a')as f:
                 f.write(f"Epoch [{epoch+1}/{epochs}], val_loss_with_NEM: {epoch_avg_val_loss1:.4f}, acc: {epoch_avg_val_acc1:.4f}\n")
                 f.write(f"Epoch [{epoch+1}/{epochs}], val_loss_without_NEM: {epoch_avg_val_loss2:.4f}, acc: {epoch_avg_val_acc2:.4f}\n\n\n\n")
-        
+        """
         
     torch.save(model_with_NEM.state_dict(), f"./training/simpleTransformer_test/nem_model_{file_name}.pth")
     writer.close()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description=" ")
-
-    parser.add_argument("--file", "-f", type=str, required=True, help=" ")
-    parser.add_argument("--epochs", "-n", type=int, required=True, help=" ")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--file', type=str, required=True)
+    parser.add_argument('--dataset_file', type=str, required=True)
+    parser.add_argument('--epochs', type=int, default=100)
+    parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument("--lr", "-l", type=float, required=True, help=" ")
     parser.add_argument("--weight_decay", "-w", type=float, required=True, help=" ")
     parser.add_argument("--betas", "-b", type=float, nargs=2, default=(0.9, 0.999))
+    parser.add_argument("--constrain","-c",action="store_true",help="default false")
+    parser.add_argument("--multi_decay",action="store_true",help="default false")
+    parser.add_argument("--multi_lr",action="store_true",help="default false")
+    parser.add_argument('--T1', type=int, default=30)
+    parser.add_argument("--T2", type=int, default=300)
+    parser.add_argument("--U1", "-u", type=float, required=True, help=" ")
+    parser.add_argument("--L", type=float )
+    parser.add_argument("--U2", "-u2", type=float, required=True, help=" ")
+    parser.add_argument("--eps", type=float,default=1e-5)
+    parser.add_argument("--gate_ema","-e",action="store_true",help="default false")
+    parser.add_argument("--gate_decay", type=float)
+    parser.add_argument("--gate_alpha", type=float)
+    parser.add_argument('--input_bits', type=int)
+    parser.add_argument('--output_bits', type=int)
+    parser.add_argument('--input_l_bits', type=int)
     
     args = parser.parse_args()
     

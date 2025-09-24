@@ -1,129 +1,277 @@
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F
 
 
 class Instruction(nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, args):
         super().__init__()
         self.config = config
-
-    def forward(self, args, p_op, state):
+        self.args = args
+        
+    def forward(self, op1, op2):
         pass
     
-
-class Arithmetic(Instruction):
-    def __init__(self, lookup_table, op_ids, config):
-        super().__init__(config)
-        self.lookupTable = lookup_table
-        self.op_ids = op_ids
-        self.register_write_gate = torch.ones(len(op_ids)) 
+class Add(Instruction):
+    def __init__(self, config, args):
+        super().__init__(config, args)
+        self.k = self.config.k_bits
+        self.l = args.input_l_bits # e.g 32 -> sign:1+ others:31
         
-    def forward(self, args, p_op, state):
-        """
-        args: {"p_dst": (b,r),
-                "p_s1": (b,r),
-                "p_s2": (b,r)}
-                
-        """
-
-        u = state.R.read(args["p_s1"]) # (b,n_vals)
-        v = state.R.read(args["p_s2"])
-        # print(f"u is {u[0]}")
-        out = torch.einsum("bo,bi,bj,oijn->bn", p_op, u, v, self.lookupTable)
-        # 
-        w_prob = torch.einsum("bo,o->b",p_op,self.register_write_gate).unsqueeze(-1)
-        # print(f"w_prob {w_prob}")
-        print(f"arithmetic out is {out}")
-        # state.R.write(args["p_dst"], out,w_prob)
+        self.register_buffer('add_table', self.create_add_table())
+        self.register_buffer('carry_table', self.create_carry_table())
         
-        return out, w_prob
-        # return state #out
+    def create_add_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for a in range(self.k):
+            for b in range(self.k):
+                for c in range(2):
+                    table[a, b, c] = (a + b + c) % self.k
+        return table
     
-class Compare(Instruction):
-    def __init__(self, op_ids, config):
-        super().__init__(config)
-        self.op_ids = op_ids
-        self.value_size = config.value_size
-        self.TRI = torch.tril(torch.ones(self.value_size,self.value_size), -1)
-        self.idx =  {
-            "cmp_eq":0,
-            "cmp_lt":1,
-            "cmp_gt":2
-        }
-        self.register_write_gate = torch.ones(len(op_ids)) # hard code
+    def create_carry_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for a in range(self.k):
+            for b in range(self.k):
+                for c in range(2):
+                    table[a, b, c] = (a + b + c) // self.k
+        return table
         
-    def forward(self, args, p_cmp, state):
+    def forward(self, op1, op2):
         """
-        p_cmp: (B,3)
-        args: {"p_dst": (b,r),
-                "p_s1": (b,r),
-                "p_s2": (b,r)}
+        op1, op2 (b,l,k)
         """
-
-        print(f"now doing compare")
-        u = state.R.read(args["p_s1"]) # (b,n_vals)
-        v = state.R.read(args["p_s2"])
-
-        peq = p_cmp[:, self.idx["cmp_eq"]:self.idx["cmp_eq"]+1]  # (B,1)
-        plt = p_cmp[:, self.idx["cmp_lt"]:self.idx["cmp_lt"]+1]
-        pgt = p_cmp[:, self.idx["cmp_gt"]:self.idx["cmp_gt"]+1]
+        B,l,k = op1.shape
+        device = op1.device
+        assert l == self.l
+        assert k == self.k
         
-       #print(f"probability {peq} {plt} {pgt}")
-        # eq u和v完全一致
-        eq_prob = (u*v).sum(-1, keepdim=True)    # (B,1)
+        result_dist = torch.zeros(B, l, k, device=device)
+        carry_dist = torch.zeros(B, 2, device=device)
+        carry_dist[:, 0] = 1.0
         
-        lt_prob = torch.einsum("bw,kw->bk", u, self.TRI) * v # (B, n_vals) [P(u<0), ... P(u < n_vals-1)]
-        lt_prob = lt_prob.sum(-1, keepdim=True)  # (B,1)
+        for i in range(l):
+            prob_t = (op1[:, i, :, None, None] * op2[:, i, None, :, None] * carry_dist[:, None, None, :]) #(b, k, k, 2)
         
-        gt_prob = torch.einsum("bw,kw->bk", v, self.TRI) * u 
-        gt_prob = gt_prob.sum(-1, keepdim=True)  # (B,1)
-        
-        flag_prob = peq * eq_prob + plt * lt_prob + pgt * gt_prob
-        flag = torch.zeros(len(flag_prob), 10)
-        flag[:,1] = flag_prob.squeeze(1)
-        print(f"flag is {flag}")
-        # print(f"register before is {state.R.registers}")
-        
-        w_prob = torch.einsum("bo,o->b",p_cmp,self.register_write_gate).unsqueeze(-1) # (B,1)
-        # state.R.write(args["p_dst"], flag, w_prob)
-        # print(f"register now is {state.R.registers}")
-        print(f"w_prob {w_prob}")
-        return flag, w_prob
-        return state
-
-class Control(Instruction):
-    def __init__(self, op_ids, config):
-        super().__init__(config)
-        self.config = config
-        self.op_ids = op_ids
-        self.idx =  {
-            "jump":0,
-            "halt":1,
-        }
-        self.register_write_gate = torch.zeros(len(op_ids))
-        
-    def forward(self, args, p_control, state):
-        print("now doing control")
-        p_jump = p_control[:, self.idx["jump"]:self.idx["jump"]+1]
-        # print(f"p_jump is {p_jump}")
-        p_halt = p_control[:, self.idx["halt"]:self.idx["halt"]+1]
+            for v in range(k):
+                mask = (self.add_table == v)
+                result_dist[:, i, v] = prob_t[:, mask].sum(dim=1)
             
-        p_cond = args["p_cond"]
-        print(f"condlist is {state.R.read(p_cond)}")
-        cond = state.R.read(p_cond)[:, 1:2] 
-        # print(f"cond is {cond}")
-        state.h = state.h + (1 - state.h) * p_halt        
-        pc_inc = torch.roll(state.pc, shifts=1, dims=1)
+            new_carry = torch.zeros(B, k, device=device)
+            for carry in range(2):
+                mask = (self.carry_table == carry) #(k,k,2)
+                new_carry[:,carry] = prob_t[:, mask].sum(dim=1)
+            
+            carry_dist = new_carry 
         
-        print(f"p_jump {p_jump}")
-        print(f"p_addr {args['p_addr']}")
-        print(f"cond is {cond}")
-        state.pc = (1 - p_jump) * pc_inc + p_jump * ((1 - cond) * pc_inc + cond * args["p_addr"])
-        print(f"pc is {state.pc}")
-        dummy_val = torch.zeros_like(state.R.read(args["p_dst"]))
-        dummy_w   = torch.zeros(self.config.batch_size, 1)
-        # print(f"dummy {dummy_w}")
-        return dummy_val, dummy_w
-        # return state
+        # with carry
+        #padded_carry = F.pad(carry_dist, (0, k-2))
+        #result_dist[:, l] = padded_carry
         
+        return result_dist
+    
+    
+class Sub(Instruction):
+    def __init__(self, config, args):
+        super().__init__(config, args)
+        self.k = self.config.k_bits
+        self.l = args.input_l_bits
+        
+        self.register_buffer('sub_table', self.create_sub_table())
+        self.register_buffer('borrow_table', self.create_borrow_table())
+        
+    def create_sub_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for x in range(self.k):
+            for y in range(self.k):
+                for b in range(2):
+                    o = x - y - b
+                    if o >= 0:
+                        table[x, y, b] = o
+                    else:
+                        table[x, y, b] = self.k + o
+        return table
+    
+    def create_borrow_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for x in range(self.k):
+            for y in range(self.k):
+                for b in range(2):
+                    diff = x - y - b
+                    table[x, y, b] = 1 if diff < 0 else 0
+        return table
+    
+    def forward(self, op1, op2):
+        B,l,k = op1.shape
+        device = op1.device
+        assert l == self.l
+        assert k == self.k
+        
+        result_dist = torch.zeros(B, l, k, device=device)
+        borrow_dist = torch.zeros(B, 2, device=device)
+        borrow_dist[:, 0] = 1.0
+        
+        for i in range(l):
+            prob_t = (op1[:, i, :, None, None] * op2[:, i, None, :, None] * borrow_dist[:, None, None, :]) #(b, k, k, 2)
+            
+            for v in range(k):
+                mask = (self.sub_table == v)
+                result_dist[:, i, v] = prob_t[:, mask].sum(dim=1)
+            
+            new_borrow = torch.zeros(B, 2, device=device)
+            for borrow in range(2):
+                mask = (self.borrow_table == borrow) # (k,k,2)
+                new_borrow[:, borrow] = prob_t[:, mask].sum(dim=1)
+            
+            borrow_dist = new_borrow
+        
+        
+        # with borrow
+        # padded_borrow = F.pad(borrow_dist, (0, k-2))
+        # result_dist[:, l] = padded_borrow
+        return result_dist
+    
+
+class Floor(Instruction):
+    def __init__(self, config, args):
+        super().__init__(config, args)
+        self.k = self.config.k_bits
+        self.l = args.input_l_bits
+        
+    
+class Subtest(nn.Module):
+    def __init__(self, k,l):
+        super().__init__()
+        self.k = k
+        self.l = l
+        
+        self.register_buffer('sub_table', self.create_sub_table())
+        self.register_buffer('borrow_table', self.create_borrow_table())
+        
+    def create_sub_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for x in range(self.k):
+            for y in range(self.k):
+                for b in range(2):
+                    o = x - y - b
+                    if o >= 0:
+                        table[x, y, b] = o
+                    else:
+                        table[x, y, b] = self.k + o
+        return table
+    
+    def create_borrow_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for x in range(self.k):
+            for y in range(self.k):
+                for b in range(2):
+                    diff = x - y - b
+                    table[x, y, b] = 1 if diff < 0 else 0
+        return table
+    
+    def forward(self, op1, op2):
+        B,l,k = op1.shape
+        assert l == self.l
+        assert k == self.k
+        
+        result_dist = torch.zeros(B, l, k)
+        borrow_dist = torch.zeros(B, 2)
+        borrow_dist[:, 0] = 1.0
+        
+        for i in range(l):
+            prob_t = (op1[:, i, :, None, None] * op2[:, i, None, :, None] * borrow_dist[:, None, None, :]) #(b, k, k, 2)
+            
+            for v in range(k):
+                mask = (self.sub_table == v)
+                result_dist[:, i, v] = prob_t[:, mask].sum(dim=1)
+            
+            new_borrow = torch.zeros(B, 2)
+            for borrow in range(2):
+                mask = (self.borrow_table == borrow) # (k,k,2)
+                new_borrow[:, borrow] = prob_t[:, mask].sum(dim=1)
+            
+            borrow_dist = new_borrow
+        
+       
+        return result_dist  
+class Addtest(nn.Module):
+    def __init__(self, k,l):
+        super().__init__()
+        self.k = k
+        self.l = l
+        
+        self.register_buffer('add_table', self.create_add_table())
+        self.register_buffer('carry_table', self.create_carry_table())
+        
+    def create_add_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for a in range(self.k):
+            for b in range(self.k):
+                for c in range(2):
+                    table[a, b, c] = (a + b + c) % self.k
+        return table
+    
+    def create_carry_table(self):
+        table = torch.zeros(self.k, self.k, 2)
+        for a in range(self.k):
+            for b in range(self.k):
+                for c in range(2):
+                    table[a, b, c] = (a + b + c) // self.k
+        return table
+        
+    def forward(self, op1, op2):
+        """
+        op1, op2 (b,l,k)
+        """
+        B,l,k = op1.shape
+        assert l == self.l
+        assert k == self.k
+        
+        result_dist = torch.zeros(B, l, k)
+        carry_dist = torch.zeros(B, 2)
+        carry_dist[:, 0] = 1.0
+        
+        for i in range(l):
+            prob_t = (op1[:, i, :, None, None] * op2[:, i, None, :, None] * carry_dist[:, None, None, :]) #(b, k, k, 2)
+        
+            for v in range(k):
+                mask = (self.add_table == v)
+                result_dist[:, i, v] = prob_t[:, mask].sum(dim=1)
+            
+            new_carry = torch.zeros(B, k)
+            for carry in range(2):
+                mask = (self.carry_table == carry) #(k,k,2)
+                new_carry[:,carry] = prob_t[:, mask].sum(dim=1)
+            
+            carry_dist = new_carry 
+        
+        return result_dist
+    
+if __name__ == '__main__':
+    a_dist = torch.zeros(1,5, 2)
+    b_dist = torch.zeros(1,5, 2)
+    
+    a_dist[0,0,0] = 1.0
+    a_dist[0,1,1] = 1.0  
+    a_dist[0,2,0] = 1.0  
+    a_dist[0,3,0] = 1.0
+    a_dist[0,4,1] = 1.0 # a=10010_2 
+    
+    b_dist[0,0,1] = 1.0  
+    b_dist[0,1,0] = 1.0  
+    b_dist[0,2,1] = 1.0  # b=01101_2
+    b_dist[0,3,1] = 1.0  
+    b_dist[0,4,0] = 1.0  
+    
+    add = Addtest(2,5)
+    
+    out = add(a_dist,b_dist)
+    print(out)        
+        
+        
+        
+        
+        
+        
+        
+    

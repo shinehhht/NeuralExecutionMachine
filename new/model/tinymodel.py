@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from config import config
-from NEM.nem import NeuralExecutionModule, NeuralExecutionModuleWithRegisters
+from NEM.nem import NeuralExecutionModule, NeuralExecutionModuleWithRegisters, NeuralExecutionModuleWithRegistersAndKbit
 
 
 class SimpleTransformerBlock(nn.Module):
@@ -88,9 +88,9 @@ class MiniModel(nn.Module):
 
         self.embedding = nn.Embedding(config.vocab_size, config.hidden_dim)
         self.output = nn.Linear(config.hidden_dim, args.output_bits*10)
-        self.NEM1 = NeuralExecutionModuleWithRegisters(config,args)
-        self.NEM2 = NeuralExecutionModuleWithRegisters(config,args)
-        self.NEM3 = NeuralExecutionModuleWithRegisters(config,args)
+        self.NEM1 = NeuralExecutionModuleWithRegistersAndKbit(config,args)
+        self.NEM2 = NeuralExecutionModuleWithRegistersAndKbit(config,args)
+        self.NEM3 = NeuralExecutionModuleWithRegistersAndKbit(config,args)
         self.transformer_block1 = SimpleTransformerBlock(config)
         self.transformer_block2 = SimpleTransformerBlock(config)
         self.transformer_block3 = SimpleTransformerBlock(config)

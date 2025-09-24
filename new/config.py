@@ -6,10 +6,8 @@ config = SimpleNamespace(
    dropout = 0.3,
    num_instructions = 4,
    num_op = 2,
-   instruction_types = 4,
-   total_slots_registers=27,
+   instruction_types = 2,
    n_regs = 4,
    vocab_size = 10,
-   input_bits = 10,
-   output_bits = 11
+   k_bits = 2,
 )
