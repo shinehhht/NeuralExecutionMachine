@@ -18,7 +18,7 @@ for lr in "${LR[@]}"; do
             echo "Dataset path: $DATASET_PATH"
 
             for alpha in "${ALPHA[@]}"; do
-                FILE_NAME="3NEM${alpha}${variant}_add_${bits}bit_100w_"
+                FILE_NAME="${alpha}${variant}_add_${bits}bit_100w_"
                 echo "=== Running: bits=${bits}, variant=${variant} ===, alpha=${alpha}, lr=${lr} ==="
 
                 CMD="python training/tinyTransformer_train.py \

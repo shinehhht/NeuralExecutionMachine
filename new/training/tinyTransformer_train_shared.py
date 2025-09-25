@@ -213,7 +213,7 @@ def train_ddp(args):
             writer.add_scalar('Gate', origin_gate, epoch)
             
             
-            if (epoch+1)%100 == 0:
+            if epoch == 0 or (epoch+1)%100 == 0:
                 """
                 with open(f'./training/record/{file_name}.txt','a')as f:
                     f.write(f"Epoch [{epoch+1}/{epochs}], train_loss_with_NEM: {epoch_avg_loss1:.4f}, acc: {epoch_avg_acc1:.4f}\n")

@@ -26,3 +26,15 @@ TBD:
 
 ![framework](./images/IMG_1591.jpg)
 
+
+
+#### New framework
+枚举的搜索空间还是比较大，难以靠有限的枚举数量来找到正确的学习方向
+- 放弃对于riscv类型的“硬编码”，转为各种指令的probability distribution
+- 对于每一行指令，最终结果是各类指令的加权和
+- 设置可微寄存器，用于贴合现实程序中效果
+- 设置gate机制来控制 计算信息融入hidden state的量
+- op1 和 op2 也不是一步parse到实数，而是l位k bit distributions
+
+![framework](./images/IMG_1602.jpg)
+

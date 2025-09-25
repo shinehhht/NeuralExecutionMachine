@@ -65,6 +65,8 @@ class FeatureProjWithRegisters(nn.Module):
             nn.Linear(config.hidden_dim // 2, 1) 
         )
         
+        nn.init.zeros_(self.opcode_head[-1].weight)
+        nn.init.zeros_(self.opcode_head[-1].bias)
             
     def forward(self, opcode, cond,gate):
         instructions_distribution = F.softmax(self.opcode_head(opcode), dim=-1)
