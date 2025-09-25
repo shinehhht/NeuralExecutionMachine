@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from NEM.instructions import Add, Sub
+from NEM.instructions import BitwiseOperator, LogicOperator, Sin, Compare
 
 class Interpreter(nn.Module):
     def __init__(self, config,policy=None):
@@ -151,7 +151,7 @@ class InterpreterWithRegisters(nn.Module):
     
     
 class InterpreterWithRegistersAndKbit(nn.Module):
-    def __init__(self, config,args):
+    def __init__(self,config,args):
         super().__init__()
         self.config = config
         self.k = config.k_bits
@@ -161,14 +161,20 @@ class InterpreterWithRegistersAndKbit(nn.Module):
 
         self.op1_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, numerical_feature_space))
         self.op2_proj = nn.Sequential(nn.LayerNorm(config.hidden_dim), nn.Linear(config.hidden_dim, numerical_feature_space))
-        self.result_head = nn.Sequential(nn.Linear(numerical_feature_space, config.hidden_dim))
+        self.result_head = nn.Linear(numerical_feature_space, config.hidden_dim)
         
         self._ops = [
-            Add(config, args),
-            Sub(config, args)
+            BitwiseOperator(config, args),
+            LogicOperator(config,args,'and'),
+            LogicOperator(config, args, 'or'),
+            Sin(config,args),
+            Compare(config, args)
         ]
 
         self.ln = nn.LayerNorm(self.config.hidden_dim)
+        
+        self.sinproj = nn.Linear(2, numerical_feature_space)
+        self.compareproj = nn.Linear(6, numerical_feature_space)
         
     def forward(self, opcode_probs, registers, k_write, q_read, cond_distribution, gate):
         """
@@ -191,9 +197,19 @@ class InterpreterWithRegistersAndKbit(nn.Module):
 
             outs = []
 
-            for i in range(categories):
+            for i in range(categories-1): # -1 means aggregate add and sub
                 zi = self._ops[i](x, y) # (b,l,k)
-                outs.append(zi)
+                if isinstance(zi, list):
+                    outs.extend(zi)
+                elif zi.shape[1] == 2:
+                    out = self.sinproj(zi).reshape(b,self.l,-1)
+                    outs.append(out)
+                elif zi.shape[1] == 6:
+                    out = self.compareproj(zi).reshape(b,self.l,-1)
+                    outs.append(out)
+                else:
+                    outs.append(zi)
+
             outs = torch.stack(outs, dim=1) #(b,n,l,k)
             mix = torch.einsum('bn, bnlk->blk', prob, outs) #(b,l,k)
             #print(f'mix shape is {mix.shape}')

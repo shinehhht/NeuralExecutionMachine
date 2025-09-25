@@ -7,5 +7,6 @@ new/training/record/
 new/training/log1/
 new/training/log2/
 new/training/log3multinem/
-
+new/originparams.txt
+new/sharedparams.txt
 *.pth

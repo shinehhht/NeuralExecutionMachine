@@ -65,8 +65,7 @@ class FeatureProjWithRegisters(nn.Module):
             nn.Linear(config.hidden_dim // 2, 1) 
         )
         
-        
-        
+            
     def forward(self, opcode, cond,gate):
         instructions_distribution = F.softmax(self.opcode_head(opcode), dim=-1)
         gate = torch.sigmoid(self.gate_head(gate))

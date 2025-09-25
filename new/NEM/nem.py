@@ -91,34 +91,11 @@ class GateProj(nn.Module):
         else:
             gate = current_gate
             
-        if not self.args.constrain:
-            return gate * gamma, (gate * gamma)[0].item(), None
-        else:
-            final_gate = self.schedule((gate * gamma), epoch)
-            return final_gate, (gate * gamma)[0].item(), final_gate[0]
+       
+        return gate * gamma, (gate * gamma)[0].item(), None
+
         
-    def schedule(self,gate,epoch):
-        
-        T1 = self.args.T1
-        T2 = self.args.T2
-        U1 = self.args.U1
-        L = self.args.L
-        U2 = self.args.U2
-        
-        
-        if epoch <= T1:
-            low, high = 0.0, U1
-        
-        elif epoch < T2:
-            alpha = (epoch - T1) / (T2 - T1)
-            low  = 0.0   + alpha * ( L - 0.0)
-            high = U2    + alpha * (1.0 - U2)
-    
-        else:
-            low, high = 0.0, 1.0
-        
-        
-        return low + (high - low) * gate
+
     def generate(self, hidden_states):
         return torch.sigmoid(self.proj(hidden_states))
              

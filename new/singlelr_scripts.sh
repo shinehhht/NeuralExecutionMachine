@@ -1,12 +1,12 @@
 #!/bin/bash
 
 LR=(0.0001)
-BITS_LIST=(5)
+BITS_LIST=(10)
 ALPHA=(0.95)
 VARIANTS=("ema")
 
 DATASET_PATH_PREFIX="multibit_add_"
-DATASET_PATH_SUFFIX="_dataset_100k.pt"
+DATASET_PATH_SUFFIX="_dataset_10k.pt"
 EPOCHS=1000
 BATCH_SIZE=2048
 
@@ -18,7 +18,7 @@ for lr in "${LR[@]}"; do
             echo "Dataset path: $DATASET_PATH"
 
             for alpha in "${ALPHA[@]}"; do
-                FILE_NAME="NEM${alpha}${variant}_add_${bits}bit_100k"
+                FILE_NAME="FAST4operator_${alpha}${variant}_add_${bits}bit_10k"
                 echo "=== Running: bits=${bits}, variant=${variant} ===, alpha=${alpha}, lr=${lr} ==="
 
                 CMD="torchrun --nproc_per_node=8 \
@@ -33,14 +33,9 @@ for lr in "${LR[@]}"; do
                     --lr $lr \
                     --betas 0.9 0.98 \
                     --weight_decay 1e-5 \
-                    --T1 30 \
-                    --T2 400 \
-                    --U1 1e-2 \
-                    --L 0.1 \
-                    --U2 0.8 \
                     --gate_decay 0.99 \
                     --gate_alpha $alpha  \
-                    --input_l_bits 18"
+                    --input_l_bits 34"
 
                 CMD="$CMD --gate_ema"
                 eval $CMD

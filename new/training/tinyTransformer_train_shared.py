@@ -10,8 +10,7 @@ from tqdm import tqdm
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from model.tinymodel import MiniModel,ModelWithoutNEM
-from model.tinymodel_shared import MiniModelShared
+from model.tinymodel_shared import MiniModelShared, ModelWithoutNEM
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 from config import config
 from utils import compute_acc, count_correct, count_correct_multibits, grad_norm
@@ -71,8 +70,7 @@ def train_ddp(args):
     rank, world_size = setup_ddp()
     device = torch.device(f'cuda:{rank}')
     
-   
-    file_name = args.file+'_'+str(args.lr)+'_'+str(args.betas)+'_'+str(args.weight_decay)
+    file_name = 'Shared_'+args.file+'_'+str(args.lr)+'_'+str(args.betas)+'_'+str(args.weight_decay)
         
     epochs = args.epochs
     batch_size = args.batch_size
@@ -92,7 +90,9 @@ def train_ddp(args):
     )
     
     model_without_NEM = ModelWithoutNEM(config,args).to(device)
-    model_with_NEM = MiniModel(config,args).to(device)
+    
+    
+    model_with_NEM = MiniModelShared(config,args).to(device)
         
     model_with_NEM_state_dict = model_with_NEM.state_dict()
     model_without_NEM_state_dict = model_without_NEM.state_dict()
@@ -101,43 +101,9 @@ def train_ddp(args):
     for name, param in model_without_NEM_state_dict.items():
         if name in model_with_NEM_state_dict and 'NEM' not in name:
             model_with_NEM_state_dict[name] = param
-            
-    if args.multi_decay:
-        decay_param = [p for n,p in model_with_NEM.named_parameters() if "Gate" not in n]
-        nodecay_param = list(model_with_NEM.NEM.Gate.parameters())
-        
-        param_groups = [
-        {"params": decay_param, "weight_decay":args.weight_decay},
-        {"params": nodecay_param, "weight_decay": 0.0},  
-        ]
-        
-        optimizer_with_NEM = torch.optim.AdamW(
-            param_groups, 
-            lr = args.lr,
-            betas = args.betas
-            )
-         
-    elif args.multi_lr:
-        gate_params = list(model_with_NEM.NEM.Gate.parameters())
-        nem_params = [p for n,p in model_with_NEM.NEM.named_parameters() if "Gate" not in n]
-        other_params = [p for n,p in model_with_NEM.named_parameters() if "NEM" not in n]
-        
-        lr_gate = args.lr * 0.1
-        
-        param_groups = [
-        {"params": gate_params, "lr": lr_gate},
-        {"params": nem_params,  "lr": args.lr},
-        {"params": other_params, "lr": args.lr} 
-        ]
-         
-        optimizer_with_NEM = optim.Adam(
-            param_groups,
-            weight_decay = args.weight_decay,
-            betas = args.betas
-            )
-        
-    else:
-        optimizer_with_NEM = optim.Adam(
+    
+
+    optimizer_with_NEM = optim.Adam(
         model_with_NEM.parameters(), 
         lr = args.lr,
         weight_decay = args.weight_decay,
@@ -155,10 +121,10 @@ def train_ddp(args):
     if rank == 0:
         total_params = sum(p.numel() for p in model_with_NEM.parameters())
         NEM_params = sum(p.numel() for p in model_with_NEM.NEM1.parameters())
-        with open ('originparams.txt' ,'a')as f:
+        with open ('sharedparam.txt' ,'a')as f:
             f.write(f"Total parameters: {total_params}\n")
             f.write(f"NEM parameters: {NEM_params}\n\n\n")
-    """
+    """ 
     
     model_with_NEM = DDP(model_with_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
     model_without_NEM = DDP(model_without_NEM, device_ids=[rank], output_device=rank,find_unused_parameters=True)
@@ -206,23 +172,6 @@ def train_ddp(args):
             num_samples += batch_size
             optimizer_with_NEM.zero_grad()
             loss.backward()
-            
-            """
-            gn_gate,rms_gate = grad_norm(model_with_NEM.module.NEM3.Gate.named_parameters(),except_gate=False)
-            gn_total, rms_total = grad_norm(model_with_NEM.module.NEM3.named_parameters(),except_gate=True)
-            if rank==0 and batch == 0:
-                writer.add_scalar('grad_norm/L2/Gate', gn_gate, epoch)
-                writer.add_scalar('grad_norm/L2/NEM3 except Gate', gn_total, epoch)
-                
-                writer.add_scalars(
-                    main_tag='grad_norm/RMS',
-                    tag_scalar_dict={
-                        'Gate':           rms_gate,
-                        'NEM3_except_Gate': rms_total
-                    },
-                    global_step=epoch
-                )
-            """
             
             optimizer_with_NEM.step()
 
@@ -373,8 +322,6 @@ if __name__ == '__main__':
     parser.add_argument("--lr", "-l", type=float, required=True, help=" ")
     parser.add_argument("--weight_decay", "-w", type=float, required=True, help=" ")
     parser.add_argument("--betas", "-b", type=float, nargs=2, default=(0.9, 0.999))
-    parser.add_argument("--multi_decay",action="store_true",help="default false")
-    parser.add_argument("--multi_lr",action="store_true",help="default false")
     parser.add_argument("--eps", type=float,default=1e-5)
     parser.add_argument("--gate_ema","-e",action="store_true",help="default false")
     parser.add_argument("--gate_decay", type=float)

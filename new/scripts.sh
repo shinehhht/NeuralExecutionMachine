@@ -1,7 +1,7 @@
 #!/bin/bash
 
 LR=(0.0001)
-BITS_LIST=(5)
+BITS_LIST=(10)
 ALPHA=(0.95)
 VARIANTS=("ema")
 

@@ -58,8 +58,15 @@ def train(args):
     for name, param in model_without_NEM_state_dict.items():
         if name in model_with_NEM_state_dict and 'NEM' not in name:
             model_with_NEM_state_dict[name] = param
-       
-
+    
+    """
+    total_params = sum(p.numel() for p in model_with_NEM.parameters())
+    NEM_params = sum(p.numel() for p in model_with_NEM.NEM1.parameters())
+    with open ('originparams.txt' ,'a')as f:
+        f.write(f"Total parameters: {total_params}\n")
+        f.write(f"NEM parameters: {NEM_params}\n\n\n")
+    """
+           
     optimizer_with_NEM = optim.Adam(
         model_with_NEM.parameters(), 
         lr = args.lr,
