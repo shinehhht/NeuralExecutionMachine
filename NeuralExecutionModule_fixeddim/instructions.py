@@ -130,7 +130,8 @@ class LogicOperator(Instruction):
             result_dist = self.bitwise_and(op1, op2)
         elif self.operation == 'or':
             result_dist = self.bitwise_or(op1, op2)
-        
+        elif self.operation == 'not':
+            result_dist = self.bitwise_not(op1, op2)
         return result_dist
     
     def bitwise_and(self, op1, op2):
@@ -148,6 +149,15 @@ class LogicOperator(Instruction):
         and_0 = op1[..., 0] * op2[..., 0]
         and_1 = 1 - and_0
         return torch.stack([and_0, and_1], dim=-1)
+    
+    def bitwise_not(self, op1, op2):
+        """
+        op1, op2 (b,l,k)
+        """
+        and_0 = op1[..., 1]
+        and_1 = op1[..., 0]
+        return torch.stack([and_0, and_1], dim=-1)
+
 
 class Compare(Instruction):
     def __init__(self, config):
@@ -218,17 +228,19 @@ class Sin(Instruction):
         expected_values = torch.sum(expected_digits * place_values, dim=1)  # (2b,)
         # print(f'expected values are {expected_values}')
         max_val = self.k ** self.l
+
         normalized_values = expected_values / max_val
         theta = self.value_range[0] + normalized_values * (self.value_range[1] - self.value_range[0])
         
        
-        sin_values = torch.sin(theta)  # (2b,)
-        sin1, sin2 = sin_values[:B], sin_values[B:]
-
+        sin_feats = torch.sin(theta)  # (2b,)
+        #print(f"max {max_val}, min {min_val}")
+        sin1, sin2 = sin_feats[:B], sin_feats[B:]
+        
         sin_features = torch.stack([sin1, sin2], dim=1) #(b,2)
         return sin_features
-    
-
+        
+        
 class InstructionPool(nn.Module):
     def __init__(self,config):
         super().__init__()
@@ -242,14 +254,13 @@ class InstructionPool(nn.Module):
         self.sin     = Sin(config)            
 
         self.compareproj = nn.Linear(6, self.l * self.k, bias=False)
-        self.sinproj     = nn.Linear(2, self.l * self.k, bias=False)
-    
+        self.sinproj = nn.Linear(2, self.l * self.k, bias=False)
+        
     def forward(self, op1, op2):
         add_dist, sub_dist = self.bitwise(op1, op2)
         
         logic_and = self.logic_and(op1,op2)
         logic_or = self.logic_or(op1,op2)
-        
         sin_feats = self.sin(op1,op2)
         sin = self.sinproj(sin_feats).reshape(op1.size(0), self.l, self.k)
         
@@ -257,7 +268,7 @@ class InstructionPool(nn.Module):
         cmp = self.compareproj(cmp_feats).reshape(op1.size(0), self.l, self.k)
         
         outs = [add_dist, sub_dist,logic_and,logic_or,sin,cmp]
-        
+        #outs = [add_dist, sub_dist,logic_and,logic_or,sin,cmp]
         return torch.stack(outs,dim=1)
     
     
@@ -403,7 +414,7 @@ class Sintest(nn.Module):
         super().__init__()
         self.k = k
         self.l = l
-        self.value_range = (0, 2*torch.pi)
+        self.value_range = (0, 1000*torch.pi)
     
     def forward(self, op1, op2):
         """
@@ -419,9 +430,10 @@ class Sintest(nn.Module):
         expected_values = torch.sum(expected_digits * place_values, dim=1)  # (2b,)
         print(f'expected values are {expected_values}')
         max_val = self.k ** self.l
+        
         normalized_values = expected_values / max_val
         theta = self.value_range[0] + normalized_values * (self.value_range[1] - self.value_range[0])
-        
+        print(theta)
        
         sin_values = torch.sin(theta)  # (2b,)
         sin1, sin2 = sin_values[:B], sin_values[B:]
@@ -485,15 +497,15 @@ if __name__ == '__main__':
     a_dist[0,1,0] = 1.0
     a_dist[0,2,1] = 1.0    #a=100_2 
     
-    b_dist[0,0,0] = 1.0  
-    b_dist[0,1,1] = 1.0  
-    b_dist[0,2,0] = 1.0  # b=010_2
+    b_dist[0,0,1] = 1.0  
+    b_dist[0,1,0] = 1.0  
+    b_dist[0,2,1] = 1.0  # b=101_2
    
     
-    add = Comparetest(3,2)
+    sin = Sintest(3,2)
     
-    addd= add(a_dist,b_dist)
-    print(addd) 
+    result= sin(a_dist,b_dist)
+    print(result) 
     
         
         

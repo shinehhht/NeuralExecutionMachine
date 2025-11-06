@@ -187,11 +187,11 @@ class InterpreterWithRegistersAndKbit(nn.Module):
             
             outs = self.ops(x,y)
             mix = torch.einsum('bn, bnlk->blk', prob, outs) #(b,l,k)
+            #mix = torch.einsum('bn, bnlk->blk', prob, outs)
             mix1 = mix.reshape(b,-1)
             value = self.ln(self.result_head(mix1).unsqueeze(1))
 
             registers.write(value,k_write[:,line:line+1,:],gate[:,line:line+1,:])
-
             
             record_lines.append({
                 "opcode_probs_line": prob[0].tolist(),   

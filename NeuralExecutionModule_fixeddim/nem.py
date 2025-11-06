@@ -4,7 +4,7 @@ import torch.nn.functional as F
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-#from NeuralExecutionModule_fixeddim.crossAttention import Transformer2Prog, Prog2Transformer,InitialParse
+# from NeuralExecutionModule_fixeddim.crossAttention import Transformer2Prog, Prog2Transformer,InitialParse
 from NeuralExecutionModule_fixeddim.crossAttentionGrouped import Prog2Transformer, InitialParseGrouped
 from NeuralExecutionModule_fixeddim.registers import Registers
 from NeuralExecutionModule_fixeddim.featurePproj import FeatureProj,FeatureProjWithRegisters
@@ -103,7 +103,7 @@ class NeuralExecutionModuleWithRegistersAndKbit(nn.Module):
         super().__init__()
         self.config = config
         self.InitialParse = InitialParseGrouped(config)
-        #self.InitialParse = InitialParseGrouped(config)
+        #self.InitialParse = InitialParse(config)
         self.FeatureProj = FeatureProjWithRegisters(config)
         self.Interpreter = InterpreterWithRegistersAndKbit(config)
         self.Fuse2Main = Prog2Transformer(config)
