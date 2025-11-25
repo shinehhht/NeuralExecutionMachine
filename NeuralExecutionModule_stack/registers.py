@@ -1,0 +1,47 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import math
+
+
+class Registers(nn.Module):
+    def __init__(self, config, batch_size):
+        super().__init__()
+        self.config = config
+        self.registers = torch.randn(batch_size, self.config.n_regs, self.config.nem_dim) * 0.1
+        
+    def read(self,query):
+        """
+        key (B,2,d)
+        """
+        self.registers = self.registers.to(query.device)
+        # query = query.to(dtype=self.registers.dtype)
+        score = (query @ self.registers.transpose(1,2)) / math.sqrt(query.size(-1))
+        w_read = F.softmax(score,dim=-1) #(B,2,n_regs)
+        v_read = w_read @ self.registers #(B,2,d)
+        
+        return v_read
+        
+        
+    def write(self,value, key,gate=None):
+        """
+        key (B,1,d)
+        value (B,1,d)
+        """
+        self.registers = self.registers.to(key.device)
+        # key = key.to(dtype=self.registers.dtype, device=self.registers.device)
+        # value = value.to(dtype=self.registers.dtype, device=self.registers.device)
+        score = (self.registers @ key.transpose(1,2)) / math.sqrt(key.size(-1))
+        w_write = F.softmax(score,dim=1) #(B,n_regs,1)
+        added = w_write @ value # (B,n_regs,d)
+        if gate is None:
+            self.registers =added
+        else:
+            portion = w_write * gate
+            self.registers = (1-portion) * self.registers + portion * added
+        
+            
+            
+        
+        
+        
